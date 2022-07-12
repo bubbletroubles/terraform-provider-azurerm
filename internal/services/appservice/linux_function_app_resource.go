@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-provider-azurerm/internal/services/appservice/parse"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/services/appservice/validate"
 	kvValidate "github.com/hashicorp/terraform-provider-azurerm/internal/services/keyvault/validate"
+	networkValidate "github.com/hashicorp/terraform-provider-azurerm/internal/services/network/validate"
 	storageValidate "github.com/hashicorp/terraform-provider-azurerm/internal/services/storage/validate"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/tags"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/tf/pluginsdk"
@@ -246,8 +247,9 @@ func (r LinuxFunctionAppResource) Arguments() map[string]*pluginsdk.Schema {
 		"tags": tags.Schema(),
 
 		"virtual_network_subnet_id": {
-			Type:     pluginsdk.TypeString,
-			Optional: true,
+			Type:         pluginsdk.TypeString,
+			Optional:     true,
+			ValidateFunc: networkValidate.SubnetID,
 		},
 	}
 }
@@ -722,6 +724,8 @@ func (r LinuxFunctionAppResource) Update() sdk.ResourceFunc {
 					if _, err := client.DeleteSwiftVirtualNetwork(ctx, id.ResourceGroup, id.SiteName); err != nil {
 						return fmt.Errorf("removing `virtual_network_subnet_id` association for %s: %+v", *id, err)
 					}
+					var empty *string
+					existing.SiteProperties.VirtualNetworkSubnetID = empty
 				} else {
 					existing.SiteProperties.VirtualNetworkSubnetID = utils.String(subnetId)
 				}
