@@ -715,7 +715,7 @@ func (r LinuxFunctionAppSlotResource) Update() sdk.ResourceFunc {
 			if metadata.ResourceData.HasChange("virtual_network_subnet_id") {
 				subnetId := metadata.ResourceData.Get("virtual_network_subnet_id").(string)
 				if subnetId == "" {
-					if _, err := client.DeleteSwiftVirtualNetwork(ctx, id.ResourceGroup, id.SiteName); err != nil {
+					if _, err := client.DeleteSwiftVirtualNetworkSlot(ctx, id.ResourceGroup, id.SiteName, id.SlotName); err != nil {
 						return fmt.Errorf("removing `virtual_network_subnet_id` association for %s: %+v", *id, err)
 					}
 					var empty *string
