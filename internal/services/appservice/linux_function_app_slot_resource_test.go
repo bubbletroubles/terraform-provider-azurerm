@@ -951,7 +951,7 @@ func TestAccLinuxFunctionAppSlot_vNetIntegration(t *testing.T) {
 			Check: acceptance.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
 				check.That(data.ResourceName).Key("virtual_network_subnet_id").MatchesOtherKey(
-					check.That("azurerm_subnet.test").Key("id"),
+					check.That("azurerm_subnet.test1").Key("id"),
 				),
 			),
 		},
