@@ -1232,7 +1232,7 @@ func TestAccLinuxFunctionApp_vNetIntegrationUpdate(t *testing.T) {
 				),
 			),
 		},
-    data.ImportStep(),
+		data.ImportStep(),
 		{
 			Config: r.vNetIntegration_subnet2(data, SkuStandardPlan),
 			Check: acceptance.ComposeTestCheckFunc(
