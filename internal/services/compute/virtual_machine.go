@@ -367,6 +367,7 @@ func flattenVirtualMachineOSDisk(ctx context.Context, disksClient *disks.DisksCl
 		})
 	}
 
+	diskAccessId := ""
 	diskSizeGb := 0
 	if input.DiskSizeGB != nil && *input.DiskSizeGB != 0 {
 		diskSizeGb = int(*input.DiskSizeGB)
@@ -378,6 +379,8 @@ func flattenVirtualMachineOSDisk(ctx context.Context, disksClient *disks.DisksCl
 	}
 
 	diskEncryptionSetId := ""
+	networkAccessPolicy := ""
+	publicNetworkAccess := ""
 	storageAccountType := ""
 	secureVMDiskEncryptionSetId := ""
 	securityEncryptionType := ""
@@ -438,8 +441,11 @@ func flattenVirtualMachineOSDisk(ctx context.Context, disksClient *disks.DisksCl
 			"caching":                          string(input.Caching),
 			"disk_size_gb":                     diskSizeGb,
 			"diff_disk_settings":               diffDiskSettings,
+			"disk_access_id":                   diskAccessId,
 			"disk_encryption_set_id":           diskEncryptionSetId,
 			"name":                             name,
+			"network_access_policy":            networkAccessPolicy,
+			"public_network_access":            publicNetworkAccess,
 			"storage_account_type":             storageAccountType,
 			"secure_vm_disk_encryption_set_id": secureVMDiskEncryptionSetId,
 			"security_encryption_type":         securityEncryptionType,
