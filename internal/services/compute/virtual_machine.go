@@ -302,8 +302,9 @@ func expandVirtualMachineOSDisk(input []interface{}, osType compute.OperatingSys
 		// an image of the machine (e.g. an Image/Shared Image Gallery)
 		CreateOption:        compute.DiskCreateOptionTypesFromImage,
 		OsType:              osType,
-		PublicNetworkAccess: utils.String(raw["public_network_access"].(string)),
 	}
+
+	PublicNetworkAccess: utils.String(raw["public_network_access"].(string)),
 
 	securityEncryptionType := raw["security_encryption_type"].(string)
 	if securityEncryptionType != "" {
