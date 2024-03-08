@@ -214,6 +214,11 @@ func virtualMachineOSDiskSchema() *pluginsdk.Schema {
 					},
 				},
 
+				"disk_access_id": {
+					Type:     pluginsdk.TypeString,
+					Optional: true,
+				},
+
 				"disk_encryption_set_id": {
 					Type:     pluginsdk.TypeString,
 					Optional: true,
@@ -235,6 +240,22 @@ func virtualMachineOSDiskSchema() *pluginsdk.Schema {
 					Optional: true,
 					ForceNew: true,
 					Computed: true,
+				},
+
+				"network_access_policy": {
+					Type:     pluginsdk.TypeString,
+					Optional: true,
+					ValidateFunc: validation.StringInSlice([]string{
+						string(disks.NetworkAccessPolicyAllowAll),
+						string(disks.NetworkAccessPolicyAllowPrivate),
+						string(disks.NetworkAccessPolicyDenyAll),
+					}, false),
+				},
+
+				"public_network_access": {
+					Type:     pluginsdk.TypeString,
+					Optional: true,
+					Default:  true,
 				},
 
 				"secure_vm_disk_encryption_set_id": {
