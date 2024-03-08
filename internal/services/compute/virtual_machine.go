@@ -300,8 +300,9 @@ func expandVirtualMachineOSDisk(input []interface{}, osType compute.OperatingSys
 		// for CreateOption, whilst it's possible for this to be "Attach" for an OS Disk
 		// from what we can tell this approach has been superseded by provisioning from
 		// an image of the machine (e.g. an Image/Shared Image Gallery)
-		CreateOption: compute.DiskCreateOptionTypesFromImage,
-		OsType:       osType,
+		CreateOption:        compute.DiskCreateOptionTypesFromImage,
+		OsType:              osType,
+		PublicNetworkAccess: utils.String(raw["public_network_access"].(string)),
 	}
 
 	securityEncryptionType := raw["security_encryption_type"].(string)
@@ -381,6 +382,9 @@ func flattenVirtualMachineOSDisk(ctx context.Context, disksClient *disks.DisksCl
 	diskEncryptionSetId := ""
 	networkAccessPolicy := ""
 	publicNetworkAccess := ""
+	if input.PublicNetworkAccess != nil {
+		publicNetworkAccess = *input.PublicNetworkAccess
+	}
 	storageAccountType := ""
 	secureVMDiskEncryptionSetId := ""
 	securityEncryptionType := ""
