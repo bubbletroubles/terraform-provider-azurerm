@@ -63,7 +63,6 @@ resource "azurerm_container_registry" "acr" {
   }
 
   encryption {
-    enabled            = true
     key_vault_key_id   = data.azurerm_key_vault_key.example.id
     identity_client_id = azurerm_user_assigned_identity.example.client_id
   }
