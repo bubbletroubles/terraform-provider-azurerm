@@ -14,7 +14,12 @@ Building on the example found in [adding a new resource](guide-new-resource.md) 
 
 Our hypothetical property `public_network_access_enabled` will be user configurable and thus will need to be added to the `Arguments` list.
 
-The position of the new property is determined alphabetically and will end up looking like the code block below.
+The position of the new property is to:
+
+- List `Required` properties first in alphabetical order (except for name, resource group, location which are always the first properties)
+- Followed by all `Optional` properties in alphabetical order
+
+It will end up looking like the code block below.
 
 ```go
 func (ResourceGroupExampleResource) Arguments() map[string]*pluginsdk.Schema {
