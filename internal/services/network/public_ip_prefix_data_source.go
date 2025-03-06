@@ -60,6 +60,11 @@ func dataSourcePublicIpPrefix() *pluginsdk.Resource {
 			"zones": commonschema.ZonesMultipleComputed(),
 
 			"tags": commonschema.TagsDataSource(),
+
+			"custom_ip_prefix_id": {
+				Type:     pluginsdk.TypeString,
+				Computed: true,
+			},
 		},
 	}
 }
@@ -92,6 +97,9 @@ func dataSourcePublicIpPrefixRead(d *pluginsdk.ResourceData, meta interface{}) e
 		if props := model.Properties; props != nil {
 			d.Set("prefix_length", props.PrefixLength)
 			d.Set("ip_prefix", props.IPPrefix)
+			if props.CustomIPPrefix != nil && props.CustomIPPrefix.Id != nil {
+				d.Set("custom_ip_prefix_id", *props.CustomIPPrefix.Id)
+			}
 		}
 		return tags.FlattenAndSet(d, model.Tags)
 	}

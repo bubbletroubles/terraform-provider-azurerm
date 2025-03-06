@@ -98,6 +98,13 @@ func resourcePublicIpPrefix() *pluginsdk.Resource {
 			},
 
 			"tags": commonschema.Tags(),
+
+			"custom_ip_prefix_id": {
+				Type:         pluginsdk.TypeString,
+				Optional:     true,
+				ForceNew:     true,
+				ValidateFunc: customipprefixes.ValidateCustomIPPrefixID,
+			},
 		},
 	}
 }
@@ -133,6 +140,12 @@ func resourcePublicIpPrefixCreate(d *pluginsdk.ResourceData, meta interface{}) e
 			PublicIPAddressVersion: pointer.To(publicipprefixes.IPVersion(d.Get("ip_version").(string))),
 		},
 		Tags: tags.Expand(d.Get("tags").(map[string]interface{})),
+	}
+
+	if v, ok := d.GetOk("custom_ip_prefix_id"); ok {
+		publicIpPrefix.Properties.CustomIPPrefix = &publicipprefixes.SubResource{
+			Id: pointer.To(v.(string)),
+		}
 	}
 
 	zones := zones.ExpandUntyped(d.Get("zones").(*schema.Set).List())
@@ -205,6 +218,9 @@ func resourcePublicIpPrefixRead(d *pluginsdk.ResourceData, meta interface{}) err
 		if props := model.Properties; props != nil {
 			d.Set("prefix_length", props.PrefixLength)
 			d.Set("ip_prefix", props.IPPrefix)
+			if props.CustomIPPrefix != nil && props.CustomIPPrefix.Id != nil {
+				d.Set("custom_ip_prefix_id", *props.CustomIPPrefix.Id)
+			}
 			if version := props.PublicIPAddressVersion; version != nil {
 				d.Set("ip_version", string(*version))
 			}

@@ -57,6 +57,8 @@ The following arguments are supported:
 
 * `zones` - (Optional) Specifies a list of Availability Zones in which this Public IP Prefix should be located. Changing this forces a new Public IP Prefix to be created.
 
+* `custom_ip_prefix_id` - (Optional) The Resource ID of the Custom IP Prefix that this Public IP Prefix should be associated with. Changing this forces a new resource to be created.
+
 -> **Please Note:** Availability Zones are [only supported in several regions at this time](https://docs.microsoft.com/azure/availability-zones/az-overview).
 
 ## Attributes Reference

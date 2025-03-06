@@ -232,6 +232,22 @@ func TestAccPublicIpPrefix_zonesMultiple(t *testing.T) {
 	})
 }
 
+func TestAccPublicIpPrefix_withCustomIPPrefix(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_public_ip_prefix", "test")
+	r := PublicIPPrefixResource{}
+
+	data.ResourceTest(t, r, []acceptance.TestStep{
+		{
+			Config: r.withCustomIPPrefix(data),
+			Check: acceptance.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+				check.That(data.ResourceName).Key("custom_ip_prefix_id").Exists(),
+			),
+		},
+		data.ImportStep(),
+	})
+}
+
 func (PublicIPPrefixResource) basic(data acceptance.TestData) string {
 	return fmt.Sprintf(`
 provider "azurerm" {
@@ -430,6 +446,46 @@ resource "azurerm_public_ip_prefix" "test" {
   location            = azurerm_resource_group.test.location
   resource_group_name = azurerm_resource_group.test.name
   zones               = ["1", "2", "3"]
+}
+`, data.RandomInteger, data.Locations.Primary)
+}
+
+const (
+	ipv4TestCidr = "194.41.20.0/24"
+	ipv6TestCidr = "2620:10c:5001::/48"
+)
+
+func (PublicIPPrefixResource) withCustomIPPrefix(data acceptance.TestData) string {
+	return fmt.Sprintf(`
+provider "azurerm" {
+  features {}
+}
+
+resource "azurerm_resource_group" "test" {
+  name     = "acctestRG-%[1]d"
+  location = "%[2]s"
+}
+
+resource "azurerm_custom_ip_prefix" "test" {
+  name                = "acctest-%[1]d"
+  location            = azurerm_resource_group.test.location
+  resource_group_name = azurerm_resource_group.test.name
+
+  cidr  = "%[3]s"
+  zones = ["1"]
+
+  roa_validity_end_date         = "2099-12-12"
+  wan_validation_signed_message = "signed message for WAN validation"
+}
+`, data.RandomInteger, data.Locations.Primary, ipv4TestCidr)
+}
+
+resource "azurerm_public_ip_prefix" "test" {
+  name                = "acctestpublicipprefix-%[1]d"
+  location            = azurerm_resource_group.test.location
+  resource_group_name = azurerm_resource_group.test.name
+  prefix_length       = 28
+  custom_ip_prefix_id = azurerm_custom_ip_prefix.test.id
 }
 `, data.RandomInteger, data.Locations.Primary)
 }

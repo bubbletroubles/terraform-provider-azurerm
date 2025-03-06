@@ -38,6 +38,22 @@ func TestAccDataSourcePublicIPPrefix_basic(t *testing.T) {
 	})
 }
 
+func TestAccDataSourcePublicIPPrefix_withCustomIPPrefix(t *testing.T) {
+	data := acceptance.BuildTestData(t, "data.azurerm_public_ip_prefix", "test")
+	r := PublicIPPrefixDataSource{}
+	name := fmt.Sprintf("acctestpublicipprefix-%d", data.RandomInteger)
+	resourceGroupName := fmt.Sprintf("acctestRG-%d", data.RandomInteger)
+
+	data.DataSourceTest(t, []acceptance.TestStep{
+		{
+			Config: r.withCustomIPPrefix(name, resourceGroupName, data),
+			Check: acceptance.ComposeTestCheckFunc(
+				check.That(data.ResourceName).Key("custom_ip_prefix").Exists(),
+			),
+		},
+	})
+}
+
 func (PublicIPPrefixDataSource) basic(name string, resourceGroupName string, data acceptance.TestData) string {
 	return fmt.Sprintf(`
 provider "azurerm" {
@@ -70,4 +86,38 @@ data "azurerm_public_ip_prefix" "test" {
   resource_group_name = azurerm_resource_group.test.name
 }
 `, resourceGroupName, data.Locations.Primary, name)
+}
+
+func (PublicIPPrefixDataSource) withCustomIPPrefix(name string, resourceGroupName string, data acceptance.TestData) string {
+	return fmt.Sprintf(`
+provider "azurerm" {
+  features {}
+}
+
+resource "azurerm_resource_group" "test" {
+  name     = "%s"
+  location = "%s"
+}
+
+resource "azurerm_custom_ip_prefix" "test" {
+  name                = "acctestcustomipprefix-%[4]d"
+  resource_group_name = azurerm_resource_group.test.name
+  location            = azurerm_resource_group.test.location
+  cidr                = "192.168.0.0/24"
+  zones               = ["1"]
+}
+
+resource "azurerm_public_ip_prefix" "test" {
+  name                = "%s"
+  location            = azurerm_resource_group.test.location
+  resource_group_name = azurerm_resource_group.test.name
+  prefix_length       = 28
+  custom_ip_prefix    = azurerm_custom_ip_prefix.test.id
+}
+
+data "azurerm_public_ip_prefix" "test" {
+  name                = azurerm_public_ip_prefix.test.name
+  resource_group_name = azurerm_resource_group.test.name
+}
+`, resourceGroupName, data.Locations.Primary, name, data.RandomInteger)
 }

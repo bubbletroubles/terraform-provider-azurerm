@@ -39,6 +39,7 @@ output "public_ip_prefix" {
 * `prefix_length` - The number of bits of the prefix.
 * `tags` - A mapping of tags to assigned to the resource.
 * `zones` - A list of Availability Zones in which this Public IP Prefix is located.
+* `custom_ip_prefix_id` - The ID of the Custom IP Prefix that this Public IP Prefix is associated with.
 
 ## Timeouts
 
