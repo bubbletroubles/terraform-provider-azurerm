@@ -94,17 +94,10 @@ func TestAccExpressRoutePort_userAssignedIdentity(t *testing.T) {
 			Config: r.userAssignedIdentity(data),
 			Check: acceptance.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
+				check.That(data.ResourceName).Key("identity.0.type").HasValue("UserAssigned"),
+				check.That(data.ResourceName).Key("identity.0.identity_ids.#").HasValue("1"),
 			),
 		},
-		data.ImportStep(),
-	})
-}
-
-func TestAccExpressRoutePort_userAssignedIdentityTagUpdate(t *testing.T) {
-	data := acceptance.BuildTestData(t, "azurerm_express_route_port", "test")
-	r := ExpressRoutePortResource{}
-
-	data.ResourceTest(t, r, []acceptance.TestStep{
 		{
 			Config: r.userAssignedIdentityWithTags(data, "tag1"),
 			Check: acceptance.ComposeTestCheckFunc(
@@ -126,6 +119,7 @@ func TestAccExpressRoutePort_userAssignedIdentityTagUpdate(t *testing.T) {
 		data.ImportStep(),
 	})
 }
+
 
 func TestAccExpressRoutePort_linkCipher(t *testing.T) {
 	data := acceptance.BuildTestData(t, "azurerm_express_route_port", "test")
