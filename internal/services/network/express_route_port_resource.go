@@ -278,16 +278,13 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 	log.Printf("[DEBUG] IDENTITY_TRACKER_START: Initial payload.Identity from Azure: %+v", payload.Identity)
 
 	// CRITICAL: Always set identity to prevent identity corruption during updates
-	// This fixes a bug where Azure API returns inconsistent casing but expand expects exact casing
-	// Use flatten->expand cycle to normalize the identity from current Azure state
-	flattenedIdentity, err := identity.FlattenSystemAndUserAssignedMap(payload.Identity)
+	// This fixes a bug where Azure API casing inconsistencies cause identity loss during updates
+	// Always use the current Terraform state identity configuration
+	expandedIdentity, err := identity.ExpandSystemAndUserAssignedMap(d.Get("identity").([]interface{}))
 	if err != nil {
-		return fmt.Errorf("flattening current `identity`: %+v", err)
+		return fmt.Errorf("expanding `identity`: %+v", err)
 	}
-	payload.Identity, err = identity.ExpandSystemAndUserAssignedMap(*flattenedIdentity)
-	if err != nil {
-		return fmt.Errorf("expanding normalized `identity`: %+v", err)
-	}
+	payload.Identity = expandedIdentity
 	log.Printf("[DEBUG] IDENTITY_TRACKER: Always setting identity with flatten->expand normalization, payload.Identity: %+v", payload.Identity)
 
 	if d.HasChange("billing_type") {
