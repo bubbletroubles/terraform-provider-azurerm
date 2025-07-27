@@ -277,14 +277,31 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 	// DEBUG: Log initial identity state
 	log.Printf("[DEBUG] IDENTITY_TRACKER_START: Initial payload.Identity from Azure: %+v", payload.Identity)
 
-	if d.HasChange("identity") {
-		expandedIdentity, err := identity.ExpandSystemAndUserAssignedMap(d.Get("identity").([]interface{}))
-		if err != nil {
-			return fmt.Errorf("expanding `identity`: %+v", err)
+	// CRITICAL: Always set identity to prevent identity corruption during updates
+	// This fixes a bug where Azure API returns lowercase "userAssigned" but expand expects uppercase "UserAssigned"
+	identityRaw := d.Get("identity").([]interface{})
+	if len(identityRaw) > 0 {
+		// Normalize the identity type to handle Azure's inconsistent casing
+		identityMap := identityRaw[0].(map[string]interface{})
+		if typeVal, ok := identityMap["type"].(string); ok {
+			// Normalize common Azure casing variants to Terraform constants
+			switch strings.ToLower(typeVal) {
+			case "userassigned":
+				identityMap["type"] = "UserAssigned"
+			case "systemassigned":
+				identityMap["type"] = "SystemAssigned"
+			case "systemassigned, userassigned":
+				identityMap["type"] = "SystemAssigned, UserAssigned"
+			}
 		}
-		payload.Identity = expandedIdentity
-		log.Printf("[DEBUG] IDENTITY_TRACKER: After identity change, payload.Identity: %+v", payload.Identity)
 	}
+	
+	expandedIdentity, err := identity.ExpandSystemAndUserAssignedMap(identityRaw)
+	if err != nil {
+		return fmt.Errorf("expanding `identity`: %+v", err)
+	}
+	payload.Identity = expandedIdentity
+	log.Printf("[DEBUG] IDENTITY_TRACKER: Always setting identity with normalization, payload.Identity: %+v", payload.Identity)
 
 	if d.HasChange("billing_type") {
 		log.Printf("[DEBUG] IDENTITY_TRACKER: Before billing_type change, payload.Identity: %+v", payload.Identity)
