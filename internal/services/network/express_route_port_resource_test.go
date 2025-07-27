@@ -120,7 +120,6 @@ func TestAccExpressRoutePort_userAssignedIdentity(t *testing.T) {
 	})
 }
 
-
 func TestAccExpressRoutePort_linkCipher(t *testing.T) {
 	data := acceptance.BuildTestData(t, "azurerm_express_route_port", "test")
 	r := ExpressRoutePortResource{}

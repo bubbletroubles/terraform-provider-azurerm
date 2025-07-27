@@ -294,7 +294,6 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 		payload.Tags = tags.Expand(d.Get("tags").(map[string]interface{}))
 	}
 
-
 	// a lock is needed here for subresource express_route_port_authorization needs a lock.
 	locks.ByID(id.ID())
 	defer locks.UnlockByID(id.ID())
