@@ -278,30 +278,17 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 	log.Printf("[DEBUG] IDENTITY_TRACKER_START: Initial payload.Identity from Azure: %+v", payload.Identity)
 
 	// CRITICAL: Always set identity to prevent identity corruption during updates
-	// This fixes a bug where Azure API returns lowercase "userAssigned" but expand expects uppercase "UserAssigned"
-	identityRaw := d.Get("identity").([]interface{})
-	if len(identityRaw) > 0 {
-		// Normalize the identity type to handle Azure's inconsistent casing
-		identityMap := identityRaw[0].(map[string]interface{})
-		if typeVal, ok := identityMap["type"].(string); ok {
-			// Normalize common Azure casing variants to Terraform constants
-			switch strings.ToLower(typeVal) {
-			case "userassigned":
-				identityMap["type"] = "UserAssigned"
-			case "systemassigned":
-				identityMap["type"] = "SystemAssigned"
-			case "systemassigned, userassigned":
-				identityMap["type"] = "SystemAssigned, UserAssigned"
-			}
-		}
-	}
-	
-	expandedIdentity, err := identity.ExpandSystemAndUserAssignedMap(identityRaw)
+	// This fixes a bug where Azure API returns inconsistent casing but expand expects exact casing
+	// Use flatten->expand cycle to normalize the identity from current Azure state
+	flattenedIdentity, err := identity.FlattenSystemAndUserAssignedMap(payload.Identity)
 	if err != nil {
-		return fmt.Errorf("expanding `identity`: %+v", err)
+		return fmt.Errorf("flattening current `identity`: %+v", err)
 	}
-	payload.Identity = expandedIdentity
-	log.Printf("[DEBUG] IDENTITY_TRACKER: Always setting identity with normalization, payload.Identity: %+v", payload.Identity)
+	payload.Identity, err = identity.ExpandSystemAndUserAssignedMap(*flattenedIdentity)
+	if err != nil {
+		return fmt.Errorf("expanding normalized `identity`: %+v", err)
+	}
+	log.Printf("[DEBUG] IDENTITY_TRACKER: Always setting identity with flatten->expand normalization, payload.Identity: %+v", payload.Identity)
 
 	if d.HasChange("billing_type") {
 		log.Printf("[DEBUG] IDENTITY_TRACKER: Before billing_type change, payload.Identity: %+v", payload.Identity)
