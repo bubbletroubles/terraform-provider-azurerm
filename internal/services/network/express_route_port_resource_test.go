@@ -341,6 +341,14 @@ resource "azurerm_express_route_port" "test" {
     identity_ids = [azurerm_user_assigned_identity.test.id]
   }
 
+  link1 {
+    admin_enabled = false
+  }
+  
+  link2 {
+    admin_enabled = false
+  }
+
   tags = {
     environment = "%[3]s"
   }

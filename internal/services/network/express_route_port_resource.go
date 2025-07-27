@@ -274,27 +274,39 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 
 	payload := existing.Model
 
+	// DEBUG: Log initial identity state
+	log.Printf("[DEBUG] IDENTITY_TRACKER_START: Initial payload.Identity from Azure: %+v", payload.Identity)
+
 	if d.HasChange("identity") {
 		expandedIdentity, err := identity.ExpandSystemAndUserAssignedMap(d.Get("identity").([]interface{}))
 		if err != nil {
 			return fmt.Errorf("expanding `identity`: %+v", err)
 		}
 		payload.Identity = expandedIdentity
+		log.Printf("[DEBUG] IDENTITY_TRACKER: After identity change, payload.Identity: %+v", payload.Identity)
 	}
 
 	if d.HasChange("billing_type") {
+		log.Printf("[DEBUG] IDENTITY_TRACKER: Before billing_type change, payload.Identity: %+v", payload.Identity)
 		if v, ok := d.GetOk("billing_type"); ok {
 			payload.Properties.BillingType = pointer.To(expressrouteports.ExpressRoutePortsBillingType(v.(string)))
 		}
+		log.Printf("[DEBUG] IDENTITY_TRACKER: After billing_type change, payload.Identity: %+v", payload.Identity)
 	}
 
 	if d.HasChanges("link1", "link2") {
+		log.Printf("[DEBUG] IDENTITY_TRACKER: Before link expansion, payload.Identity: %+v", payload.Identity)
 		payload.Properties.Links = expandExpressRoutePortLinks(d.Get("link1").([]interface{}), d.Get("link2").([]interface{}))
+		log.Printf("[DEBUG] IDENTITY_TRACKER: After link expansion, payload.Identity: %+v", payload.Identity)
 	}
 
 	if d.HasChange("tags") {
+		log.Printf("[DEBUG] IDENTITY_TRACKER: Before tag expansion, payload.Identity: %+v", payload.Identity)
 		payload.Tags = tags.Expand(d.Get("tags").(map[string]interface{}))
+		log.Printf("[DEBUG] IDENTITY_TRACKER: After tag expansion, payload.Identity: %+v", payload.Identity)
 	}
+
+	log.Printf("[DEBUG] IDENTITY_TRACKER_END: Final payload.Identity before PUT: %+v", payload.Identity)
 
 	// a lock is needed here for subresource express_route_port_authorization needs a lock.
 	locks.ByID(id.ID())
