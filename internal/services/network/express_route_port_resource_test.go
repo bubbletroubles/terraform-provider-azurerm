@@ -182,10 +182,10 @@ func (r ExpressRoutePortResource) basic(data acceptance.TestData) string {
 %s
 
 resource "azurerm_express_route_port" "test" {
-  name                = "acctestERP-%d"
+  name                = "acctestERP-%[2]d"
   resource_group_name = azurerm_resource_group.test.name
   location            = azurerm_resource_group.test.location
-  peering_location    = "Equinix-Dallas-DA6"
+  peering_location    = "Airtel-Chennai2-CLS"
   bandwidth_in_gbps   = 10
   encapsulation       = "Dot1Q"
   billing_type        = "MeteredData"
@@ -193,7 +193,7 @@ resource "azurerm_express_route_port" "test" {
     ENV = "Test"
   }
 }
-`, template, data.RandomInteger)
+`, template, data.RandomIntOfLength(8))
 }
 
 func (r ExpressRoutePortResource) adminState(data acceptance.TestData) string {
