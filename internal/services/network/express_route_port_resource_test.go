@@ -135,6 +135,31 @@ func TestAccExpressRoutePort_linkCipher(t *testing.T) {
 	})
 }
 
+func TestAccExpressRoutePort_identityRemoval(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_express_route_port", "test")
+	r := ExpressRoutePortResource{}
+
+	data.ResourceTest(t, r, []acceptance.TestStep{
+		{
+			Config: r.linkCipher(data),
+			Check: acceptance.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+				check.That(data.ResourceName).Key("identity.0.type").HasValue("UserAssigned"),
+				check.That(data.ResourceName).Key("identity.0.identity_ids.#").HasValue("1"),
+				check.That(data.ResourceName).Key("link1.0.macsec_cipher").HasValue("GcmAesXpn256"),
+			),
+		},
+		{
+			Config: r.basic(data),
+			Check: acceptance.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+				check.That(data.ResourceName).Key("identity.#").HasValue("0"),
+			),
+		},
+		data.ImportStep(),
+	})
+}
+
 func (r ExpressRoutePortResource) Exists(ctx context.Context, clients *clients.Client, state *pluginsdk.InstanceState) (*bool, error) {
 	client := clients.Network.ExpressRoutePorts
 
