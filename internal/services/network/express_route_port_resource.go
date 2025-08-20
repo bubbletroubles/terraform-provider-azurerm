@@ -272,12 +272,12 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 
 	// Debug: Log the existing API model's identity before any changes
 	log.Printf("[DEBUG] Express Route Port %s - Existing API model identity: %+v", id, payload.Identity)
-	
+
 	// Debug: Check if existing identity is nil vs empty
 	if payload.Identity == nil {
 		log.Printf("[DEBUG] Express Route Port %s - Existing identity is NIL", id)
 	} else {
-		log.Printf("[DEBUG] Express Route Port %s - Existing identity is NOT nil: Type=%v, UserAssignedIdentities=%+v", 
+		log.Printf("[DEBUG] Express Route Port %s - Existing identity is NOT nil: Type=%v, UserAssignedIdentities=%+v",
 			id, payload.Identity.Type, payload.Identity.UserAssignedIdentities)
 	}
 
@@ -285,12 +285,12 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 	if err != nil {
 		return fmt.Errorf("expanding `identity`: %+v", err)
 	}
-	
+
 	// Debug: Log the expanded identity from Terraform state
 	log.Printf("[DEBUG] Express Route Port %s - Expanded identity from TF state: %+v", id, expandedIdentity)
-	
+
 	payload.Identity = expandedIdentity
-	
+
 	// Debug: Log final payload identity after assignment
 	log.Printf("[DEBUG] Express Route Port %s - Final payload identity: %+v", id, payload.Identity)
 
