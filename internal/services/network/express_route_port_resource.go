@@ -277,8 +277,8 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 	if payload.Identity == nil {
 		log.Printf("[DEBUG] Express Route Port %s - Existing identity is NIL", id)
 	} else {
-		log.Printf("[DEBUG] Express Route Port %s - Existing identity is NOT nil: Type=%v, UserAssignedIdentities=%+v",
-			id, payload.Identity.Type, payload.Identity.UserAssignedIdentities)
+		log.Printf("[DEBUG] Express Route Port %s - Existing identity is NOT nil: Type=%v, IdentityIds=%+v",
+			id, payload.Identity.Type, payload.Identity.IdentityIds)
 	}
 
 	expandedIdentity, err := identity.ExpandSystemAndUserAssignedMap(d.Get("identity").([]interface{}))
