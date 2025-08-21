@@ -317,16 +317,28 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 		payload.Properties.Links = expandExpressRoutePortLinks(d.Get("link1").([]interface{}), d.Get("link2").([]interface{}))
 	}
 
-	if d.HasChange("tags") {
-		payload.Tags = tags.Expand(d.Get("tags").(map[string]interface{}))
-	}
-
 	// a lock is needed here for subresource express_route_port_authorization needs a lock.
 	locks.ByID(id.ID())
 	defer locks.UnlockByID(id.ID())
 
-	if err := client.CreateOrUpdateThenPoll(ctx, *id, *payload); err != nil {
-		return fmt.Errorf("updating %s: %+v", id, err)
+	// Check if only tags have changed - use PATCH UpdateTags API to preserve identity
+	if d.HasChange("tags") && !d.HasChangesExcept("tags") {
+		log.Printf("[DEBUG] ERP-DEBUG-TAGS-ONLY: Only tags changed, using UpdateTags PATCH API to preserve identity")
+		tagsPayload := expressrouteports.TagsObject{
+			Tags: tags.Expand(d.Get("tags").(map[string]interface{})),
+		}
+		if _, err := client.UpdateTags(ctx, *id, tagsPayload); err != nil {
+			return fmt.Errorf("updating tags for %s: %+v", id, err)
+		}
+	} else {
+		// For other changes, use the full PUT API
+		log.Printf("[DEBUG] ERP-DEBUG-FULL-UPDATE: Non-tag changes detected, using CreateOrUpdate PUT API")
+		if d.HasChange("tags") {
+			payload.Tags = tags.Expand(d.Get("tags").(map[string]interface{}))
+		}
+		if err := client.CreateOrUpdateThenPoll(ctx, *id, *payload); err != nil {
+			return fmt.Errorf("updating %s: %+v", id, err)
+		}
 	}
 
 	d.SetId(id.ID())
