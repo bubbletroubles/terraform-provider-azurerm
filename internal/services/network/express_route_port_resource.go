@@ -258,6 +258,9 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 		return fmt.Errorf("retrieving %s: %+v", id, err)
 	}
 
+	// Debug: Log the full response from Azure ARM API
+	log.Printf("[DEBUG] Express Route Port %s - Full Azure ARM API response: %+v", id, existing)
+
 	if existing.Model == nil {
 		return fmt.Errorf("retrieving %s: `model` was nil", *id)
 	}
@@ -267,11 +270,31 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 
 	payload := existing.Model
 
-	expandedIdentity, err := identity.ExpandSystemAndUserAssignedMap(d.Get("identity").([]interface{}))
-	if err != nil {
-		return fmt.Errorf("expanding `identity`: %+v", err)
+	// Debug: Log the existing API model's identity before any changes
+	log.Printf("[DEBUG] Express Route Port %s - Existing API model identity: %+v", id, payload.Identity)
+
+	// Debug: Check if existing identity is nil vs empty
+	if payload.Identity == nil {
+		log.Printf("[DEBUG] Express Route Port %s - Existing identity is NIL", id)
+	} else {
+		log.Printf("[DEBUG] Express Route Port %s - Existing identity is NOT nil: Type=%v, IdentityIds=%+v",
+			id, payload.Identity.Type, payload.Identity.IdentityIds)
 	}
-	payload.Identity = expandedIdentity
+
+	if d.HasChange("identity") {
+		expandedIdentity, err := identity.ExpandSystemAndUserAssignedMap(d.Get("identity").([]interface{}))
+		if err != nil {
+			return fmt.Errorf("expanding `identity`: %+v", err)
+		}
+
+		// Debug: Log the expanded identity from Terraform state
+		log.Printf("[DEBUG] Express Route Port %s - Expanded identity from TF state: %+v", id, expandedIdentity)
+
+		payload.Identity = expandedIdentity
+
+		// Debug: Log final payload identity after assignment
+		log.Printf("[DEBUG] Express Route Port %s - Final payload identity: %+v", id, payload.Identity)
+	}
 
 	if d.HasChange("billing_type") {
 		if v, ok := d.GetOk("billing_type"); ok {
@@ -292,6 +315,10 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 	defer locks.UnlockByID(id.ID())
 
 	payload.Properties.Links = expandExpressRoutePortLinks(d.Get("link1").([]interface{}), d.Get("link2").([]interface{}))
+
+	// Debug: Log the complete payload being sent to Azure ARM API
+	log.Printf("[DEBUG] Express Route Port %s - Complete payload being sent to ARM API: %+v", id, *payload)
+	log.Printf("[DEBUG] Express Route Port %s - Payload identity being sent to ARM API: %+v", id, payload.Identity)
 
 	if err := client.CreateOrUpdateThenPoll(ctx, *id, *payload); err != nil {
 		return fmt.Errorf("updating %s: %+v", id, err)
