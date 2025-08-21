@@ -273,6 +273,10 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 			return fmt.Errorf("expanding `identity`: %+v", err)
 		}
 		payload.Identity = expandedIdentity
+	} else {
+		// When identity hasn't changed, completely omit it from the request
+		// This allows Azure to preserve the existing identity and supports ignore_changes
+		payload.Identity = nil
 	}
 
 	if d.HasChange("billing_type") {
