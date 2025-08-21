@@ -203,10 +203,16 @@ func resourceArmExpressRoutePortCreate(d *pluginsdk.ResourceData, meta interface
 		return tf.ImportAsExistsError("azurerm_express_route_port", id.ID())
 	}
 
-	expandedIdentity, err := identity.ExpandSystemAndUserAssignedMap(d.Get("identity").([]interface{}))
+	// [ERP-DEBUG] Log identity during create
+	terraformIdentityCreate := d.Get("identity").([]interface{})
+	log.Printf("[DEBUG] ERP-DEBUG-CREATE-TF-IDENTITY: Identity from Terraform state during create: %+v", terraformIdentityCreate)
+
+	expandedIdentity, err := identity.ExpandSystemAndUserAssignedMap(terraformIdentityCreate)
 	if err != nil {
 		return fmt.Errorf("expanding `identity`: %+v", err)
 	}
+	
+	log.Printf("[DEBUG] ERP-DEBUG-CREATE-EXPANDED: Expanded identity during create: %+v", expandedIdentity)
 	param := expressrouteports.ExpressRoutePort{
 		Name:     pointer.To(id.ExpressRoutePortName),
 		Location: pointer.To(location.Normalize(d.Get("location").(string))),
@@ -218,6 +224,9 @@ func resourceArmExpressRoutePortCreate(d *pluginsdk.ResourceData, meta interface
 		Identity: expandedIdentity,
 		Tags:     tags.Expand(d.Get("tags").(map[string]interface{})),
 	}
+
+	// [ERP-DEBUG] Log final create payload identity
+	log.Printf("[DEBUG] ERP-DEBUG-CREATE-PAYLOAD: Final create payload identity: %+v", param.Identity)
 
 	if v, ok := d.GetOk("billing_type"); ok {
 		param.Properties.BillingType = pointer.To(expressrouteports.ExpressRoutePortsBillingType(v.(string)))
@@ -253,6 +262,8 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 		return err
 	}
 
+	// [ERP-DEBUG] GET current state from Azure before any changes
+	log.Printf("[DEBUG] ERP-DEBUG-GET: About to retrieve current state for %s", id)
 	existing, err := client.Get(ctx, *id)
 	if err != nil {
 		return fmt.Errorf("retrieving %s: %+v", id, err)
@@ -265,19 +276,36 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 		return fmt.Errorf("retrieving %s: `properties` was nil", *id)
 	}
 
+	// [ERP-DEBUG] Log current Azure identity state
+	log.Printf("[DEBUG] ERP-DEBUG-AZURE-IDENTITY: Current identity from Azure: %+v", existing.Model.Identity)
+
 	payload := existing.Model
 
-	if d.HasChange("identity") {
-		expandedIdentity, err := identity.ExpandSystemAndUserAssignedMap(d.Get("identity").([]interface{}))
+	// [ERP-DEBUG] Log Terraform state identity
+	terraformIdentity := d.Get("identity").([]interface{})
+	log.Printf("[DEBUG] ERP-DEBUG-TF-IDENTITY: Identity from Terraform state: %+v", terraformIdentity)
+	
+	// [ERP-DEBUG] Check if identity has changed
+	hasIdentityChange := d.HasChange("identity")
+	log.Printf("[DEBUG] ERP-DEBUG-HAS-CHANGE: d.HasChange('identity') = %t", hasIdentityChange)
+
+	if hasIdentityChange {
+		log.Printf("[DEBUG] ERP-DEBUG-EXPANDING: Identity has changed, expanding from Terraform state")
+		expandedIdentity, err := identity.ExpandSystemAndUserAssignedMap(terraformIdentity)
 		if err != nil {
 			return fmt.Errorf("expanding `identity`: %+v", err)
 		}
+		log.Printf("[DEBUG] ERP-DEBUG-EXPANDED: Expanded identity: %+v", expandedIdentity)
 		payload.Identity = expandedIdentity
 	} else {
+		log.Printf("[DEBUG] ERP-DEBUG-OMITTING: Identity hasn't changed, setting to nil to omit from request")
 		// When identity hasn't changed, completely omit it from the request
 		// This allows Azure to preserve the existing identity and supports ignore_changes
 		payload.Identity = nil
 	}
+	
+	// [ERP-DEBUG] Log final payload identity
+	log.Printf("[DEBUG] ERP-DEBUG-FINAL-PAYLOAD: Final payload identity before PUT: %+v", payload.Identity)
 
 	if d.HasChange("billing_type") {
 		if v, ok := d.GetOk("billing_type"); ok {
@@ -316,6 +344,10 @@ func resourceArmExpressRoutePortRead(d *pluginsdk.ResourceData, meta interface{}
 		return err
 	}
 
+	// [ERP-DEBUG] Log read operation start with context
+	log.Printf("[DEBUG] ERP-DEBUG-READ-START: Starting read operation for %s", id)
+	log.Printf("[DEBUG] ERP-DEBUG-READ-CONTEXT: Current Terraform state ID: %s", d.Id())
+	
 	resp, err := client.Get(ctx, *id)
 	if err != nil {
 		if response.WasNotFound(resp.HttpResponse) {
@@ -330,14 +362,25 @@ func resourceArmExpressRoutePortRead(d *pluginsdk.ResourceData, meta interface{}
 	d.Set("resource_group_name", id.ResourceGroupName)
 
 	if model := resp.Model; model != nil {
+		// [ERP-DEBUG] Log raw identity from Azure during read
+		log.Printf("[DEBUG] ERP-DEBUG-READ-AZURE-IDENTITY: Raw identity from Azure during read: %+v", model.Identity)
+		
 		d.Set("location", location.NormalizeNilable(model.Location))
 		flattenedIdentity, err := identity.FlattenSystemAndUserAssignedMap(model.Identity)
 		if err != nil {
 			return fmt.Errorf("flattening `identity`: %+v", err)
 		}
+		
+		// [ERP-DEBUG] Log flattened identity being set to state
+		log.Printf("[DEBUG] ERP-DEBUG-READ-FLATTENED: Flattened identity being set to Terraform state: %+v", flattenedIdentity)
+		
 		if err := d.Set("identity", flattenedIdentity); err != nil {
 			return fmt.Errorf("setting `identity`: %v", err)
 		}
+		
+		// [ERP-DEBUG] Verify what actually got set in the state
+		stateIdentityAfterSet := d.Get("identity").([]interface{})
+		log.Printf("[DEBUG] ERP-DEBUG-READ-STATE-VERIFY: Identity actually stored in state after d.Set: %+v", stateIdentityAfterSet)
 
 		if props := model.Properties; props != nil {
 			d.Set("peering_location", props.PeeringLocation)
@@ -358,8 +401,14 @@ func resourceArmExpressRoutePortRead(d *pluginsdk.ResourceData, meta interface{}
 			d.Set("guid", props.ResourceGuid)
 			d.Set("mtu", props.Mtu)
 		}
+		
+		// [ERP-DEBUG] Log completion of read operation
+		log.Printf("[DEBUG] ERP-DEBUG-READ-COMPLETE: Read operation completed successfully for %s", id)
 		return tags.FlattenAndSet(d, model.Tags)
 	}
+	
+	// [ERP-DEBUG] Log when model is nil
+	log.Printf("[DEBUG] ERP-DEBUG-READ-NO-MODEL: No model returned from Azure for %s", id)
 	return nil
 }
 
