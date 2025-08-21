@@ -281,18 +281,20 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 			id, payload.Identity.Type, payload.Identity.IdentityIds)
 	}
 
-	expandedIdentity, err := identity.ExpandSystemAndUserAssignedMap(d.Get("identity").([]interface{}))
-	if err != nil {
-		return fmt.Errorf("expanding `identity`: %+v", err)
+	if d.HasChange("identity") {
+		expandedIdentity, err := identity.ExpandSystemAndUserAssignedMap(d.Get("identity").([]interface{}))
+		if err != nil {
+			return fmt.Errorf("expanding `identity`: %+v", err)
+		}
+
+		// Debug: Log the expanded identity from Terraform state
+		log.Printf("[DEBUG] Express Route Port %s - Expanded identity from TF state: %+v", id, expandedIdentity)
+
+		payload.Identity = expandedIdentity
+
+		// Debug: Log final payload identity after assignment
+		log.Printf("[DEBUG] Express Route Port %s - Final payload identity: %+v", id, payload.Identity)
 	}
-
-	// Debug: Log the expanded identity from Terraform state
-	log.Printf("[DEBUG] Express Route Port %s - Expanded identity from TF state: %+v", id, expandedIdentity)
-
-	payload.Identity = expandedIdentity
-
-	// Debug: Log final payload identity after assignment
-	log.Printf("[DEBUG] Express Route Port %s - Final payload identity: %+v", id, payload.Identity)
 
 	if d.HasChange("billing_type") {
 		if v, ok := d.GetOk("billing_type"); ok {
