@@ -327,10 +327,20 @@ func resourceArmExpressRoutePortRead(d *pluginsdk.ResourceData, meta interface{}
 
 	if model := resp.Model; model != nil {
 		d.Set("location", location.NormalizeNilable(model.Location))
+		log.Printf("[DEBUG] ERP-DEBUG: Raw model.Identity from Azure API: %+v", model.Identity)
+		if model.Identity != nil {
+			log.Printf("[DEBUG] ERP-DEBUG: Identity.Type: %q", string(model.Identity.Type))
+			log.Printf("[DEBUG] ERP-DEBUG: Identity.PrincipalId: %q", model.Identity.PrincipalId)
+			log.Printf("[DEBUG] ERP-DEBUG: Identity.TenantId: %q", model.Identity.TenantId)
+			log.Printf("[DEBUG] ERP-DEBUG: Identity.IdentityIds: %+v", model.Identity.IdentityIds)
+		}
+		
 		flattenedIdentity, err := identity.FlattenSystemAndUserAssignedMap(model.Identity)
 		if err != nil {
 			return fmt.Errorf("flattening `identity`: %+v", err)
 		}
+		log.Printf("[DEBUG] ERP-DEBUG: Flattened identity result: %+v", flattenedIdentity)
+		
 		if err := d.Set("identity", flattenedIdentity); err != nil {
 			return fmt.Errorf("setting `identity`: %v", err)
 		}
