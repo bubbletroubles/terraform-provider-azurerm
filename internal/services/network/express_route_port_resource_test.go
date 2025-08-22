@@ -85,7 +85,7 @@ func TestAccExpressRoutePort_requiresImport(t *testing.T) {
 	})
 }
 
-func TestAccExpressRoutePort_userAssignedIdentity(t *testing.T) {
+func TestAccExpressRoutePort_identityPreservationDuringUpdates(t *testing.T) {
 	data := acceptance.BuildTestData(t, "azurerm_express_route_port", "test")
 	r := ExpressRoutePortResource{}
 
@@ -99,6 +99,7 @@ func TestAccExpressRoutePort_userAssignedIdentity(t *testing.T) {
 			),
 		},
 		{
+			// Test scenario 1: Tags-only update (should use PATCH UpdateTags API)
 			Config: r.userAssignedIdentityWithTags(data, "tag1"),
 			Check: acceptance.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
@@ -108,12 +109,35 @@ func TestAccExpressRoutePort_userAssignedIdentity(t *testing.T) {
 			),
 		},
 		{
+			// Test scenario 1 continued: Another tags-only update (should use PATCH UpdateTags API)
 			Config: r.userAssignedIdentityWithTags(data, "tag2"),
 			Check: acceptance.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
 				check.That(data.ResourceName).Key("identity.0.type").HasValue("UserAssigned"),
 				check.That(data.ResourceName).Key("identity.0.identity_ids.#").HasValue("1"),
 				check.That(data.ResourceName).Key("tags.environment").HasValue("tag2"),
+			),
+		},
+		{
+			// Test scenario 2: Tags + other properties update (should use PUT CreateOrUpdate API)
+			Config: r.userAssignedIdentityWithTagsAndBilling(data, "tag3", "UnlimitedData"),
+			Check: acceptance.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+				check.That(data.ResourceName).Key("identity.0.type").HasValue("UserAssigned"),
+				check.That(data.ResourceName).Key("identity.0.identity_ids.#").HasValue("1"),
+				check.That(data.ResourceName).Key("tags.environment").HasValue("tag3"),
+				check.That(data.ResourceName).Key("billing_type").HasValue("UnlimitedData"),
+			),
+		},
+		{
+			// Test scenario 3: Only other properties update (should use PUT CreateOrUpdate API)
+			Config: r.userAssignedIdentityWithTagsAndBilling(data, "tag3", "MeteredData"),
+			Check: acceptance.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+				check.That(data.ResourceName).Key("identity.0.type").HasValue("UserAssigned"),
+				check.That(data.ResourceName).Key("identity.0.identity_ids.#").HasValue("1"),
+				check.That(data.ResourceName).Key("tags.environment").HasValue("tag3"),
+				check.That(data.ResourceName).Key("billing_type").HasValue("MeteredData"),
 			),
 		},
 		data.ImportStep(),
@@ -372,6 +396,46 @@ resource "azurerm_express_route_port" "test" {
   }
 }
 `, template, data.RandomIntOfLength(8), tagValue)
+}
+
+func (r ExpressRoutePortResource) userAssignedIdentityWithTagsAndBilling(data acceptance.TestData, tagValue string, billingType string) string {
+	template := r.template(data)
+	return fmt.Sprintf(`
+%s
+
+resource "azurerm_user_assigned_identity" "test" {
+  location            = azurerm_resource_group.test.location
+  name                = "acctestUAI-%[2]d"
+  resource_group_name = azurerm_resource_group.test.name
+}
+
+resource "azurerm_express_route_port" "test" {
+  name                = "acctestERP-%[2]d"
+  resource_group_name = azurerm_resource_group.test.name
+  location            = azurerm_resource_group.test.location
+  peering_location    = "Airtel-Chennai2-CLS"
+  bandwidth_in_gbps   = 10
+  encapsulation       = "Dot1Q"
+  billing_type        = "%[4]s"
+
+  identity {
+    type         = "UserAssigned"
+    identity_ids = [azurerm_user_assigned_identity.test.id]
+  }
+
+  link1 {
+    admin_enabled = false
+  }
+
+  link2 {
+    admin_enabled = false
+  }
+
+  tags = {
+    environment = "%[3]s"
+  }
+}
+`, template, data.RandomIntOfLength(8), tagValue, billingType)
 }
 
 func (r ExpressRoutePortResource) template(data acceptance.TestData) string {
