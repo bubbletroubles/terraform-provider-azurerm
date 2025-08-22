@@ -341,9 +341,9 @@ func (r ExpressRoutePortResource) userAssignedIdentityWithTags(data acceptance.T
 %s
 
 resource "azurerm_user_assigned_identity" "test" {
-  location            = azurerm_resource_group.test.location
-  name                = "acctestUAI-%[2]d"
+  name                = "acctest1%[2]d"
   resource_group_name = azurerm_resource_group.test.name
+  location            = azurerm_resource_group.test.location
 }
 
 resource "azurerm_express_route_port" "test" {
