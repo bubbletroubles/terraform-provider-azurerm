@@ -334,13 +334,13 @@ func resourceArmExpressRoutePortRead(d *pluginsdk.ResourceData, meta interface{}
 			log.Printf("[DEBUG] ERP-DEBUG: Identity.TenantId: %q", model.Identity.TenantId)
 			log.Printf("[DEBUG] ERP-DEBUG: Identity.IdentityIds: %+v", model.Identity.IdentityIds)
 		}
-		
+
 		flattenedIdentity, err := identity.FlattenSystemAndUserAssignedMap(model.Identity)
 		if err != nil {
 			return fmt.Errorf("flattening `identity`: %+v", err)
 		}
 		log.Printf("[DEBUG] ERP-DEBUG: Flattened identity result: %+v", flattenedIdentity)
-		
+
 		if err := d.Set("identity", flattenedIdentity); err != nil {
 			return fmt.Errorf("setting `identity`: %v", err)
 		}
