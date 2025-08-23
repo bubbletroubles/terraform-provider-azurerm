@@ -294,7 +294,6 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 	hasPropertyChanges := d.HasChangeExcept("tags")
 	hasTagChanges := d.HasChange("tags")
 
-
 	if hasPropertyChanges {
 		// Use CreateOrUpdate for property changes
 		// For PUT operations, we need to ensure identity is in exact same format as CREATE
@@ -325,7 +324,6 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 			return fmt.Errorf("updating tags for %s: %+v", id, err)
 		}
 	}
-
 
 	d.SetId(id.ID())
 
@@ -358,17 +356,14 @@ func resourceArmExpressRoutePortRead(d *pluginsdk.ResourceData, meta interface{}
 	if model := resp.Model; model != nil {
 		d.Set("location", location.NormalizeNilable(model.Location))
 
-
 		flattenedIdentity, err := identity.FlattenSystemAndUserAssignedMap(model.Identity)
 		if err != nil {
 			return fmt.Errorf("flattening `identity`: %+v", err)
 		}
 
-
 		if err := d.Set("identity", flattenedIdentity); err != nil {
 			return fmt.Errorf("setting `identity`: %v", err)
 		}
-
 
 		if props := model.Properties; props != nil {
 			d.Set("peering_location", props.PeeringLocation)
