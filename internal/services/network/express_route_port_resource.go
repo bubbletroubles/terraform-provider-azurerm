@@ -359,9 +359,9 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 	if hasPropertyChanges {
 		// Use CreateOrUpdate for property changes - but recreate identity from scratch to match CREATE format
 		log.Printf("[DEBUG] ERP-DEBUG-UPDATE: About to send CreateOrUpdate request for property changes...")
-		
+
 		// For PUT operations, we need to ensure identity is in exact same format as CREATE
-		// The issue is that existing.Model.Identity comes from Azure API with "userAssigned" 
+		// The issue is that existing.Model.Identity comes from Azure API with "userAssigned"
 		// but CREATE works with "UserAssigned" - we need to reconstruct it properly
 		if !d.HasChange("identity") && payload.Identity != nil {
 			// When identity hasn't changed, reconstruct it from Terraform state to get correct format
@@ -377,7 +377,7 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 			}
 			payload.Identity = reconstructedIdentity
 		}
-		
+
 		if err := client.CreateOrUpdateThenPoll(ctx, *id, *payload); err != nil {
 			return fmt.Errorf("updating %s: %+v", id, err)
 		}
