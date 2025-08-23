@@ -268,8 +268,6 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 
 	payload := existing.Model
 
-	// Only update identity if it has actually changed in the configuration
-	// This respects ignore_changes = [identity] by preserving existing identity
 	if d.HasChange("identity") {
 		expandedIdentity, err := identity.ExpandSystemAndUserAssignedMap(d.Get("identity").([]interface{}))
 		if err != nil {
@@ -277,7 +275,6 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 		}
 		payload.Identity = expandedIdentity
 	}
-	// If identity hasn't changed, payload.Identity keeps existing.Model.Identity
 
 	if d.HasChange("billing_type") {
 		if v, ok := d.GetOk("billing_type"); ok {
@@ -294,7 +291,7 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 	defer locks.UnlockByID(id.ID())
 
 	// Determine if we need to update properties or just tags
-	hasPropertyChanges := d.HasChange("identity") || d.HasChange("billing_type") || d.HasChanges("link1", "link2")
+	hasPropertyChanges := d.HasChangeExcept("tags")
 	hasTagChanges := d.HasChange("tags")
 
 
