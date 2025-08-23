@@ -357,8 +357,27 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 	log.Printf("[DEBUG] ERP-DEBUG-UPDATE: hasPropertyChanges: %v, hasTagChanges: %v", hasPropertyChanges, hasTagChanges)
 
 	if hasPropertyChanges {
-		// Use CreateOrUpdate for property changes
+		// Use CreateOrUpdate for property changes - but recreate identity from scratch to match CREATE format
 		log.Printf("[DEBUG] ERP-DEBUG-UPDATE: About to send CreateOrUpdate request for property changes...")
+		
+		// For PUT operations, we need to ensure identity is in exact same format as CREATE
+		// The issue is that existing.Model.Identity comes from Azure API with "userAssigned" 
+		// but CREATE works with "UserAssigned" - we need to reconstruct it properly
+		if !d.HasChange("identity") && payload.Identity != nil {
+			// When identity hasn't changed, reconstruct it from Terraform state to get correct format
+			log.Printf("[DEBUG] ERP-DEBUG-UPDATE: Reconstructing identity from Terraform state for PUT...")
+			reconstructedIdentity, err := identity.ExpandSystemAndUserAssignedMap(d.Get("identity").([]interface{}))
+			if err != nil {
+				return fmt.Errorf("reconstructing identity for PUT: %+v", err)
+			}
+			log.Printf("[DEBUG] ERP-DEBUG-UPDATE: Reconstructed identity: %+v", reconstructedIdentity)
+			if reconstructedIdentity != nil {
+				log.Printf("[DEBUG] ERP-DEBUG-UPDATE: Reconstructed identity Type: %q", string(reconstructedIdentity.Type))
+				log.Printf("[DEBUG] ERP-DEBUG-UPDATE: Reconstructed identity IdentityIds: %+v", reconstructedIdentity.IdentityIds)
+			}
+			payload.Identity = reconstructedIdentity
+		}
+		
 		if err := client.CreateOrUpdateThenPoll(ctx, *id, *payload); err != nil {
 			return fmt.Errorf("updating %s: %+v", id, err)
 		}
