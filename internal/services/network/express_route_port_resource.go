@@ -363,6 +363,7 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 		// For PUT operations, we need to ensure identity is in exact same format as CREATE
 		// The issue is that existing.Model.Identity comes from Azure API with "userAssigned"
 		// but CREATE works with "UserAssigned" - we need to reconstruct it properly
+		log.Printf("[DEBUG] ERP-DEBUG-UPDATE: Checking reconstruction conditions: d.HasChange('identity')=%v, payload.Identity!=nil=%v", d.HasChange("identity"), payload.Identity != nil)
 		if !d.HasChange("identity") && payload.Identity != nil {
 			// When identity hasn't changed, reconstruct it from Terraform state to get correct format
 			log.Printf("[DEBUG] ERP-DEBUG-UPDATE: Reconstructing identity from Terraform state for PUT...")
@@ -376,6 +377,8 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 				log.Printf("[DEBUG] ERP-DEBUG-UPDATE: Reconstructed identity IdentityIds: %+v", reconstructedIdentity.IdentityIds)
 			}
 			payload.Identity = reconstructedIdentity
+		} else {
+			log.Printf("[DEBUG] ERP-DEBUG-UPDATE: Skipping reconstruction - using existing payload identity")
 		}
 
 		if err := client.CreateOrUpdateThenPoll(ctx, *id, *payload); err != nil {
