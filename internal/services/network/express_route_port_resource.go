@@ -329,7 +329,7 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 		log.Printf("[DEBUG] ERP-DEBUG-UPDATE: Identity has NOT changed, keeping existing identity")
 	}
 	// If identity hasn't changed, payload.Identity keeps existing.Model.Identity from line 268
-	
+
 	log.Printf("[DEBUG] ERP-DEBUG-UPDATE: Final payload identity before API call: %+v", payload.Identity)
 	if payload.Identity != nil {
 		log.Printf("[DEBUG] ERP-DEBUG-UPDATE: Final payload identity Type: %q", string(payload.Identity.Type))
@@ -402,7 +402,7 @@ func resourceArmExpressRoutePortRead(d *pluginsdk.ResourceData, meta interface{}
 
 	if model := resp.Model; model != nil {
 		d.Set("location", location.NormalizeNilable(model.Location))
-		
+
 		log.Printf("[DEBUG] ERP-DEBUG-READ: Raw identity from API: %+v", model.Identity)
 		if model.Identity != nil {
 			log.Printf("[DEBUG] ERP-DEBUG-READ: Raw identity Type: %q", string(model.Identity.Type))
@@ -410,12 +410,12 @@ func resourceArmExpressRoutePortRead(d *pluginsdk.ResourceData, meta interface{}
 			log.Printf("[DEBUG] ERP-DEBUG-READ: Raw identity TenantId: %q", model.Identity.TenantId)
 			log.Printf("[DEBUG] ERP-DEBUG-READ: Raw identity IdentityIds: %+v", model.Identity.IdentityIds)
 		}
-		
+
 		flattenedIdentity, err := identity.FlattenSystemAndUserAssignedMap(model.Identity)
 		if err != nil {
 			return fmt.Errorf("flattening `identity`: %+v", err)
 		}
-		
+
 		log.Printf("[DEBUG] ERP-DEBUG-READ: Flattened identity for Terraform state: %+v", flattenedIdentity)
 		if flattenedIdentity != nil && len(*flattenedIdentity) > 0 {
 			if identityMap, ok := (*flattenedIdentity)[0].(map[string]interface{}); ok {
@@ -429,7 +429,7 @@ func resourceArmExpressRoutePortRead(d *pluginsdk.ResourceData, meta interface{}
 		if err := d.Set("identity", flattenedIdentity); err != nil {
 			return fmt.Errorf("setting `identity`: %v", err)
 		}
-		
+
 		log.Printf("[DEBUG] ERP-DEBUG-READ: After d.Set - Terraform state identity value: %+v", d.Get("identity"))
 
 		if props := model.Properties; props != nil {
