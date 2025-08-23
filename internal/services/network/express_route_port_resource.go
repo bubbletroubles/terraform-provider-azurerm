@@ -346,30 +346,53 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 		payload.Properties.Links = expandExpressRoutePortLinks(d.Get("link1").([]interface{}), d.Get("link2").([]interface{}))
 	}
 
-	if d.HasChange("tags") {
-		payload.Tags = tags.Expand(d.Get("tags").(map[string]interface{}))
-	}
-
 	// a lock is needed here for subresource express_route_port_authorization needs a lock.
 	locks.ByID(id.ID())
 	defer locks.UnlockByID(id.ID())
 
-	log.Printf("[DEBUG] ERP-DEBUG-UPDATE: About to send UPDATE request...")
-	if err := client.CreateOrUpdateThenPoll(ctx, *id, *payload); err != nil {
-		return fmt.Errorf("updating %s: %+v", id, err)
+	// Determine if we need to update properties or just tags
+	hasPropertyChanges := d.HasChange("identity") || d.HasChange("billing_type") || d.HasChanges("link1", "link2")
+	hasTagChanges := d.HasChange("tags")
+
+	log.Printf("[DEBUG] ERP-DEBUG-UPDATE: hasPropertyChanges: %v, hasTagChanges: %v", hasPropertyChanges, hasTagChanges)
+
+	if hasPropertyChanges {
+		// Use CreateOrUpdate for property changes
+		log.Printf("[DEBUG] ERP-DEBUG-UPDATE: About to send CreateOrUpdate request for property changes...")
+		if err := client.CreateOrUpdateThenPoll(ctx, *id, *payload); err != nil {
+			return fmt.Errorf("updating %s: %+v", id, err)
+		}
+	} else if hasTagChanges {
+		// Use UpdateTags PATCH API for tag-only changes to preserve identity
+		log.Printf("[DEBUG] ERP-DEBUG-UPDATE: About to send UpdateTags PATCH request for tag-only changes...")
+		tagsPayload := expressrouteports.TagsObject{
+			Tags: tags.Expand(d.Get("tags").(map[string]interface{})),
+		}
+		log.Printf("[DEBUG] ERP-DEBUG-UPDATE: UpdateTags payload: %+v", tagsPayload)
+		
+		if _, err := client.UpdateTags(ctx, *id, tagsPayload); err != nil {
+			return fmt.Errorf("updating tags for %s: %+v", id, err)
+		}
 	}
 
 	// Verify what was actually updated by doing a GET
-	log.Printf("[DEBUG] ERP-DEBUG-UPDATE: UPDATE completed, verifying identity...")
-	verifyResp, err := client.Get(ctx, *id)
-	if err != nil {
-		log.Printf("[DEBUG] ERP-DEBUG-UPDATE: Failed to verify after UPDATE: %+v", err)
-	} else if verifyResp.Model != nil && verifyResp.Model.Identity != nil {
-		log.Printf("[DEBUG] ERP-DEBUG-UPDATE: After UPDATE - Identity from API: %+v", verifyResp.Model.Identity)
-		log.Printf("[DEBUG] ERP-DEBUG-UPDATE: After UPDATE - Identity.Type: %q", string(verifyResp.Model.Identity.Type))
-		log.Printf("[DEBUG] ERP-DEBUG-UPDATE: After UPDATE - Identity.IdentityIds: %+v", verifyResp.Model.Identity.IdentityIds)
-	} else {
-		log.Printf("[DEBUG] ERP-DEBUG-UPDATE: After UPDATE - No identity returned from API")
+	if hasPropertyChanges || hasTagChanges {
+		log.Printf("[DEBUG] ERP-DEBUG-UPDATE: UPDATE completed, verifying identity...")
+		verifyResp, err := client.Get(ctx, *id)
+		if err != nil {
+			log.Printf("[DEBUG] ERP-DEBUG-UPDATE: Failed to verify after UPDATE: %+v", err)
+		} else if verifyResp.Model != nil {
+			if verifyResp.Model.Identity != nil {
+				log.Printf("[DEBUG] ERP-DEBUG-UPDATE: After UPDATE - Identity from API: %+v", verifyResp.Model.Identity)
+				log.Printf("[DEBUG] ERP-DEBUG-UPDATE: After UPDATE - Identity.Type: %q", string(verifyResp.Model.Identity.Type))
+				log.Printf("[DEBUG] ERP-DEBUG-UPDATE: After UPDATE - Identity.IdentityIds: %+v", verifyResp.Model.Identity.IdentityIds)
+			} else {
+				log.Printf("[DEBUG] ERP-DEBUG-UPDATE: After UPDATE - No identity returned from API")
+			}
+			if verifyResp.Model.Tags != nil {
+				log.Printf("[DEBUG] ERP-DEBUG-UPDATE: After UPDATE - Tags from API: %+v", *verifyResp.Model.Tags)
+			}
+		}
 	}
 
 	d.SetId(id.ID())
