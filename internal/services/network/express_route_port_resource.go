@@ -296,15 +296,8 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 
 	if hasPropertyChanges {
 		// Use CreateOrUpdate for property changes
-		// For PUT operations, we need to ensure identity is in exact same format as CREATE
-		if !d.HasChange("identity") && payload.Identity != nil {
-			// When identity hasn't changed, reconstruct it from Terraform state to get correct format
-			reconstructedIdentity, err := identity.ExpandSystemAndUserAssignedMap(d.Get("identity").([]interface{}))
-			if err != nil {
-				return fmt.Errorf("reconstructing identity for PUT: %+v", err)
-			}
-			payload.Identity = reconstructedIdentity
-		}
+		// When identity hasn't changed in config, preserve the current Azure identity (respects ignore_changes)
+		// The payload.Identity already contains the current identity from existing.Model.Identity
 
 		// Also update tags if they've changed (for mixed property+tag updates)
 		if hasTagChanges {
