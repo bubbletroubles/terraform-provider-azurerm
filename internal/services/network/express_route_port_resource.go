@@ -380,6 +380,12 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 		} else {
 			log.Printf("[DEBUG] ERP-DEBUG-UPDATE: Skipping reconstruction - using existing payload identity")
 		}
+		
+		// Also update tags if they've changed (for mixed property+tag updates)
+		if hasTagChanges {
+			log.Printf("[DEBUG] ERP-DEBUG-UPDATE: Also updating tags in CreateOrUpdate payload...")
+			payload.Tags = tags.Expand(d.Get("tags").(map[string]interface{}))
+		}
 
 		if err := client.CreateOrUpdateThenPoll(ctx, *id, *payload); err != nil {
 			return fmt.Errorf("updating %s: %+v", id, err)
