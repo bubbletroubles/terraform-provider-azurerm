@@ -203,15 +203,9 @@ func resourceArmExpressRoutePortCreate(d *pluginsdk.ResourceData, meta interface
 		return tf.ImportAsExistsError("azurerm_express_route_port", id.ID())
 	}
 
-	log.Printf("[DEBUG] ERP-DEBUG-CREATE: Terraform state identity value: %+v", d.Get("identity"))
 	expandedIdentity, err := identity.ExpandSystemAndUserAssignedMap(d.Get("identity").([]interface{}))
 	if err != nil {
 		return fmt.Errorf("expanding `identity`: %+v", err)
-	}
-	log.Printf("[DEBUG] ERP-DEBUG-CREATE: Expanded identity for API: %+v", expandedIdentity)
-	if expandedIdentity != nil {
-		log.Printf("[DEBUG] ERP-DEBUG-CREATE: Expanded identity Type: %q", string(expandedIdentity.Type))
-		log.Printf("[DEBUG] ERP-DEBUG-CREATE: Expanded identity IdentityIds: %+v", expandedIdentity.IdentityIds)
 	}
 
 	param := expressrouteports.ExpressRoutePort{
@@ -235,42 +229,14 @@ func resourceArmExpressRoutePortCreate(d *pluginsdk.ResourceData, meta interface
 	defer locks.UnlockByID(id.ID())
 
 	// The link properties can't be specified in first creation. It will result into either error (e.g. setting `adminState`) or being ignored (e.g. setting MACSec)
-	log.Printf("[DEBUG] ERP-DEBUG-CREATE: About to send first CREATE request with Identity: %+v", param.Identity)
 	if err := client.CreateOrUpdateThenPoll(ctx, id, param); err != nil {
 		return fmt.Errorf("creating %s: %+v", id, err)
-	}
-
-	// Verify what was actually created by doing a GET
-	log.Printf("[DEBUG] ERP-DEBUG-CREATE: First CREATE completed, verifying identity...")
-	verifyResp, err := client.Get(ctx, id)
-	if err != nil {
-		log.Printf("[DEBUG] ERP-DEBUG-CREATE: Failed to verify after first CREATE: %+v", err)
-	} else if verifyResp.Model != nil && verifyResp.Model.Identity != nil {
-		log.Printf("[DEBUG] ERP-DEBUG-CREATE: After first CREATE - Identity from API: %+v", verifyResp.Model.Identity)
-		log.Printf("[DEBUG] ERP-DEBUG-CREATE: After first CREATE - Identity.Type: %q", string(verifyResp.Model.Identity.Type))
-		log.Printf("[DEBUG] ERP-DEBUG-CREATE: After first CREATE - Identity.IdentityIds: %+v", verifyResp.Model.Identity.IdentityIds)
-	} else {
-		log.Printf("[DEBUG] ERP-DEBUG-CREATE: After first CREATE - No identity returned from API")
 	}
 
 	param.Properties.Links = expandExpressRoutePortLinks(d.Get("link1").([]interface{}), d.Get("link2").([]interface{}))
 
-	log.Printf("[DEBUG] ERP-DEBUG-CREATE: About to send second CREATE (with links) with Identity: %+v", param.Identity)
 	if err := client.CreateOrUpdateThenPoll(ctx, id, param); err != nil {
 		return fmt.Errorf("creating %s: %+v", id, err)
-	}
-
-	// Verify what was actually created after links update
-	log.Printf("[DEBUG] ERP-DEBUG-CREATE: Second CREATE completed, verifying identity...")
-	verifyResp2, err := client.Get(ctx, id)
-	if err != nil {
-		log.Printf("[DEBUG] ERP-DEBUG-CREATE: Failed to verify after second CREATE: %+v", err)
-	} else if verifyResp2.Model != nil && verifyResp2.Model.Identity != nil {
-		log.Printf("[DEBUG] ERP-DEBUG-CREATE: After second CREATE - Identity from API: %+v", verifyResp2.Model.Identity)
-		log.Printf("[DEBUG] ERP-DEBUG-CREATE: After second CREATE - Identity.Type: %q", string(verifyResp2.Model.Identity.Type))
-		log.Printf("[DEBUG] ERP-DEBUG-CREATE: After second CREATE - Identity.IdentityIds: %+v", verifyResp2.Model.Identity.IdentityIds)
-	} else {
-		log.Printf("[DEBUG] ERP-DEBUG-CREATE: After second CREATE - No identity returned from API")
 	}
 
 	d.SetId(id.ID())
@@ -300,41 +266,18 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 		return fmt.Errorf("retrieving %s: `properties` was nil", *id)
 	}
 
-	log.Printf("[DEBUG] ERP-DEBUG-UPDATE: Existing identity from GET request: %+v", existing.Model.Identity)
-	if existing.Model.Identity != nil {
-		log.Printf("[DEBUG] ERP-DEBUG-UPDATE: Existing identity Type: %q", string(existing.Model.Identity.Type))
-		log.Printf("[DEBUG] ERP-DEBUG-UPDATE: Existing identity IdentityIds: %+v", existing.Model.Identity.IdentityIds)
-	}
-
-	log.Printf("[DEBUG] ERP-DEBUG-UPDATE: Terraform state identity value: %+v", d.Get("identity"))
-	log.Printf("[DEBUG] ERP-DEBUG-UPDATE: d.HasChange('identity'): %v", d.HasChange("identity"))
-
 	payload := existing.Model
 
 	// Only update identity if it has actually changed in the configuration
 	// This respects ignore_changes = [identity] by preserving existing identity
 	if d.HasChange("identity") {
-		log.Printf("[DEBUG] ERP-DEBUG-UPDATE: Identity has changed, expanding from state...")
 		expandedIdentity, err := identity.ExpandSystemAndUserAssignedMap(d.Get("identity").([]interface{}))
 		if err != nil {
 			return fmt.Errorf("expanding `identity`: %+v", err)
 		}
-		log.Printf("[DEBUG] ERP-DEBUG-UPDATE: Expanded identity: %+v", expandedIdentity)
-		if expandedIdentity != nil {
-			log.Printf("[DEBUG] ERP-DEBUG-UPDATE: Expanded identity Type: %q", string(expandedIdentity.Type))
-			log.Printf("[DEBUG] ERP-DEBUG-UPDATE: Expanded identity IdentityIds: %+v", expandedIdentity.IdentityIds)
-		}
 		payload.Identity = expandedIdentity
-	} else {
-		log.Printf("[DEBUG] ERP-DEBUG-UPDATE: Identity has NOT changed, keeping existing identity")
 	}
-	// If identity hasn't changed, payload.Identity keeps existing.Model.Identity from line 268
-
-	log.Printf("[DEBUG] ERP-DEBUG-UPDATE: Final payload identity before API call: %+v", payload.Identity)
-	if payload.Identity != nil {
-		log.Printf("[DEBUG] ERP-DEBUG-UPDATE: Final payload identity Type: %q", string(payload.Identity.Type))
-		log.Printf("[DEBUG] ERP-DEBUG-UPDATE: Final payload identity IdentityIds: %+v", payload.Identity.IdentityIds)
-	}
+	// If identity hasn't changed, payload.Identity keeps existing.Model.Identity
 
 	if d.HasChange("billing_type") {
 		if v, ok := d.GetOk("billing_type"); ok {
@@ -354,36 +297,21 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 	hasPropertyChanges := d.HasChange("identity") || d.HasChange("billing_type") || d.HasChanges("link1", "link2")
 	hasTagChanges := d.HasChange("tags")
 
-	log.Printf("[DEBUG] ERP-DEBUG-UPDATE: hasPropertyChanges: %v, hasTagChanges: %v", hasPropertyChanges, hasTagChanges)
 
 	if hasPropertyChanges {
-		// Use CreateOrUpdate for property changes - but recreate identity from scratch to match CREATE format
-		log.Printf("[DEBUG] ERP-DEBUG-UPDATE: About to send CreateOrUpdate request for property changes...")
-
+		// Use CreateOrUpdate for property changes
 		// For PUT operations, we need to ensure identity is in exact same format as CREATE
-		// The issue is that existing.Model.Identity comes from Azure API with "userAssigned"
-		// but CREATE works with "UserAssigned" - we need to reconstruct it properly
-		log.Printf("[DEBUG] ERP-DEBUG-UPDATE: Checking reconstruction conditions: d.HasChange('identity')=%v, payload.Identity!=nil=%v", d.HasChange("identity"), payload.Identity != nil)
 		if !d.HasChange("identity") && payload.Identity != nil {
 			// When identity hasn't changed, reconstruct it from Terraform state to get correct format
-			log.Printf("[DEBUG] ERP-DEBUG-UPDATE: Reconstructing identity from Terraform state for PUT...")
 			reconstructedIdentity, err := identity.ExpandSystemAndUserAssignedMap(d.Get("identity").([]interface{}))
 			if err != nil {
 				return fmt.Errorf("reconstructing identity for PUT: %+v", err)
 			}
-			log.Printf("[DEBUG] ERP-DEBUG-UPDATE: Reconstructed identity: %+v", reconstructedIdentity)
-			if reconstructedIdentity != nil {
-				log.Printf("[DEBUG] ERP-DEBUG-UPDATE: Reconstructed identity Type: %q", string(reconstructedIdentity.Type))
-				log.Printf("[DEBUG] ERP-DEBUG-UPDATE: Reconstructed identity IdentityIds: %+v", reconstructedIdentity.IdentityIds)
-			}
 			payload.Identity = reconstructedIdentity
-		} else {
-			log.Printf("[DEBUG] ERP-DEBUG-UPDATE: Skipping reconstruction - using existing payload identity")
 		}
 
 		// Also update tags if they've changed (for mixed property+tag updates)
 		if hasTagChanges {
-			log.Printf("[DEBUG] ERP-DEBUG-UPDATE: Also updating tags in CreateOrUpdate payload...")
 			payload.Tags = tags.Expand(d.Get("tags").(map[string]interface{}))
 		}
 
@@ -392,36 +320,15 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 		}
 	} else if hasTagChanges {
 		// Use UpdateTags PATCH API for tag-only changes to preserve identity
-		log.Printf("[DEBUG] ERP-DEBUG-UPDATE: About to send UpdateTags PATCH request for tag-only changes...")
 		tagsPayload := expressrouteports.TagsObject{
 			Tags: tags.Expand(d.Get("tags").(map[string]interface{})),
 		}
-		log.Printf("[DEBUG] ERP-DEBUG-UPDATE: UpdateTags payload: %+v", tagsPayload)
 
 		if _, err := client.UpdateTags(ctx, *id, tagsPayload); err != nil {
 			return fmt.Errorf("updating tags for %s: %+v", id, err)
 		}
 	}
 
-	// Verify what was actually updated by doing a GET
-	if hasPropertyChanges || hasTagChanges {
-		log.Printf("[DEBUG] ERP-DEBUG-UPDATE: UPDATE completed, verifying identity...")
-		verifyResp, err := client.Get(ctx, *id)
-		if err != nil {
-			log.Printf("[DEBUG] ERP-DEBUG-UPDATE: Failed to verify after UPDATE: %+v", err)
-		} else if verifyResp.Model != nil {
-			if verifyResp.Model.Identity != nil {
-				log.Printf("[DEBUG] ERP-DEBUG-UPDATE: After UPDATE - Identity from API: %+v", verifyResp.Model.Identity)
-				log.Printf("[DEBUG] ERP-DEBUG-UPDATE: After UPDATE - Identity.Type: %q", string(verifyResp.Model.Identity.Type))
-				log.Printf("[DEBUG] ERP-DEBUG-UPDATE: After UPDATE - Identity.IdentityIds: %+v", verifyResp.Model.Identity.IdentityIds)
-			} else {
-				log.Printf("[DEBUG] ERP-DEBUG-UPDATE: After UPDATE - No identity returned from API")
-			}
-			if verifyResp.Model.Tags != nil {
-				log.Printf("[DEBUG] ERP-DEBUG-UPDATE: After UPDATE - Tags from API: %+v", *verifyResp.Model.Tags)
-			}
-		}
-	}
 
 	d.SetId(id.ID())
 
@@ -454,34 +361,17 @@ func resourceArmExpressRoutePortRead(d *pluginsdk.ResourceData, meta interface{}
 	if model := resp.Model; model != nil {
 		d.Set("location", location.NormalizeNilable(model.Location))
 
-		log.Printf("[DEBUG] ERP-DEBUG-READ: Raw identity from API: %+v", model.Identity)
-		if model.Identity != nil {
-			log.Printf("[DEBUG] ERP-DEBUG-READ: Raw identity Type: %q", string(model.Identity.Type))
-			log.Printf("[DEBUG] ERP-DEBUG-READ: Raw identity PrincipalId: %q", model.Identity.PrincipalId)
-			log.Printf("[DEBUG] ERP-DEBUG-READ: Raw identity TenantId: %q", model.Identity.TenantId)
-			log.Printf("[DEBUG] ERP-DEBUG-READ: Raw identity IdentityIds: %+v", model.Identity.IdentityIds)
-		}
 
 		flattenedIdentity, err := identity.FlattenSystemAndUserAssignedMap(model.Identity)
 		if err != nil {
 			return fmt.Errorf("flattening `identity`: %+v", err)
 		}
 
-		log.Printf("[DEBUG] ERP-DEBUG-READ: Flattened identity for Terraform state: %+v", flattenedIdentity)
-		if flattenedIdentity != nil && len(*flattenedIdentity) > 0 {
-			if identityMap, ok := (*flattenedIdentity)[0].(map[string]interface{}); ok {
-				log.Printf("[DEBUG] ERP-DEBUG-READ: Flattened identity type: %q", identityMap["type"])
-				log.Printf("[DEBUG] ERP-DEBUG-READ: Flattened identity identity_ids: %+v", identityMap["identity_ids"])
-				log.Printf("[DEBUG] ERP-DEBUG-READ: Flattened identity principal_id: %q", identityMap["principal_id"])
-				log.Printf("[DEBUG] ERP-DEBUG-READ: Flattened identity tenant_id: %q", identityMap["tenant_id"])
-			}
-		}
 
 		if err := d.Set("identity", flattenedIdentity); err != nil {
 			return fmt.Errorf("setting `identity`: %v", err)
 		}
 
-		log.Printf("[DEBUG] ERP-DEBUG-READ: After d.Set - Terraform state identity value: %+v", d.Get("identity"))
 
 		if props := model.Properties; props != nil {
 			d.Set("peering_location", props.PeeringLocation)
