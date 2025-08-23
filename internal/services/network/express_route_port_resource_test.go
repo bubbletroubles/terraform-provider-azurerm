@@ -131,7 +131,7 @@ func TestAccExpressRoutePort_userAssignedIdentity(t *testing.T) {
 			),
 		},
 		{
-			// Step 5: Update both tags and billing_type (should use CreateOrUpdate PUT API, identity preserved)  
+			// Step 5: Update both tags and billing_type (should use CreateOrUpdate PUT API, identity preserved)
 			Config: r.userAssignedIdentityWithTagsAndBillingType(data, "tag3"),
 			Check: acceptance.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
@@ -196,7 +196,6 @@ func TestAccExpressRoutePort_identityRemoval(t *testing.T) {
 		data.ImportStep(),
 	})
 }
-
 
 func (r ExpressRoutePortResource) Exists(ctx context.Context, clients *clients.Client, state *pluginsdk.InstanceState) (*bool, error) {
 	client := clients.Network.ExpressRoutePorts

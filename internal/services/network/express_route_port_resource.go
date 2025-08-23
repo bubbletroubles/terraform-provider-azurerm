@@ -369,7 +369,7 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 			Tags: tags.Expand(d.Get("tags").(map[string]interface{})),
 		}
 		log.Printf("[DEBUG] ERP-DEBUG-UPDATE: UpdateTags payload: %+v", tagsPayload)
-		
+
 		if _, err := client.UpdateTags(ctx, *id, tagsPayload); err != nil {
 			return fmt.Errorf("updating tags for %s: %+v", id, err)
 		}
