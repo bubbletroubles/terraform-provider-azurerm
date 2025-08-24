@@ -268,12 +268,48 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 
 	payload := existing.Model
 
+	// ====== DEBUG: 1. Identity from Terraform state ======
+	log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: === 1. TERRAFORM STATE IDENTITY ===")
+	terraformIdentity := d.Get("identity").([]interface{})
+	log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: Raw Terraform state identity: %+v", terraformIdentity)
+	if len(terraformIdentity) > 0 {
+		if identityMap, ok := terraformIdentity[0].(map[string]interface{}); ok {
+			log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: Terraform identity type: %+v", identityMap["type"])
+			log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: Terraform identity_ids: %+v", identityMap["identity_ids"])
+		}
+	}
+
+	// ====== DEBUG: 2. Identity from Azure GET response ======
+	log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: === 2. AZURE GET RESPONSE IDENTITY ===")
+	log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: existing.Model.Identity: %+v", existing.Model.Identity)
+	if existing.Model.Identity != nil {
+		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: Azure GET identity Type: %q", string(existing.Model.Identity.Type))
+		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: Azure GET identity PrincipalId: %q", existing.Model.Identity.PrincipalId)
+		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: Azure GET identity TenantId: %q", existing.Model.Identity.TenantId)
+		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: Azure GET identity IdentityIds: %+v", existing.Model.Identity.IdentityIds)
+	}
+
 	if d.HasChange("identity") {
+		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: Identity has changed in config, updating from Terraform state")
 		expandedIdentity, err := identity.ExpandSystemAndUserAssignedMap(d.Get("identity").([]interface{}))
 		if err != nil {
 			return fmt.Errorf("expanding `identity`: %+v", err)
 		}
 		payload.Identity = expandedIdentity
+	} else {
+		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: Identity has NOT changed, preserving existing Azure identity")
+		// Explicitly preserve the existing identity
+		payload.Identity = existing.Model.Identity
+	}
+
+	// ====== DEBUG: 3. Identity that will be sent in PUT request ======
+	log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: === 3. PUT REQUEST PAYLOAD IDENTITY ===")
+	log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: payload.Identity before API call: %+v", payload.Identity)
+	if payload.Identity != nil {
+		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: PUT payload identity Type: %q", string(payload.Identity.Type))
+		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: PUT payload identity PrincipalId: %q", payload.Identity.PrincipalId)
+		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: PUT payload identity TenantId: %q", payload.Identity.TenantId)
+		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: PUT payload identity IdentityIds: %+v", payload.Identity.IdentityIds)
 	}
 
 	if d.HasChange("billing_type") {
