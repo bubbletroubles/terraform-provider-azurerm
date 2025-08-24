@@ -297,9 +297,10 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 		}
 		payload.Identity = expandedIdentity
 	} else {
-		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: Identity has NOT changed, preserving existing Azure identity")
-		// Explicitly preserve the existing identity
-		payload.Identity = existing.Model.Identity
+		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: Identity has NOT changed, omitting identity from PUT payload to preserve existing identity")
+		// Don't include identity in the PUT payload when it hasn't changed
+		// This prevents Azure from interpreting malformed/empty identity as "remove all identities"
+		payload.Identity = nil
 	}
 
 	// ====== DEBUG: 3. Identity that will be sent in PUT request ======
