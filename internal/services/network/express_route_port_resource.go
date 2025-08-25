@@ -235,9 +235,9 @@ func resourceArmExpressRoutePortCreate(d *pluginsdk.ResourceData, meta interface
 		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: First CREATE identity UserAssignedIdentities: %+v", param.Identity.UserAssignedIdentities)
 		if param.Identity.UserAssignedIdentities != nil {
 			for resourceId, identity := range param.Identity.UserAssignedIdentities {
-				log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: First CREATE identity[%q]: ClientId=%q, PrincipalId=%q", 
-					resourceId, 
-					pointer.From(identity.ClientID), 
+				log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: First CREATE identity[%q]: ClientId=%q, PrincipalId=%q",
+					resourceId,
+					pointer.From(identity.ClientID),
 					pointer.From(identity.PrincipalID))
 			}
 		}
@@ -258,9 +258,9 @@ func resourceArmExpressRoutePortCreate(d *pluginsdk.ResourceData, meta interface
 		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: Second CREATE identity UserAssignedIdentities: %+v", param.Identity.UserAssignedIdentities)
 		if param.Identity.UserAssignedIdentities != nil {
 			for resourceId, identity := range param.Identity.UserAssignedIdentities {
-				log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: Second CREATE identity[%q]: ClientId=%q, PrincipalId=%q", 
-					resourceId, 
-					pointer.From(identity.ClientID), 
+				log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: Second CREATE identity[%q]: ClientId=%q, PrincipalId=%q",
+					resourceId,
+					pointer.From(identity.ClientID),
 					pointer.From(identity.PrincipalID))
 			}
 		}
@@ -325,9 +325,9 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: Azure GET identity UserAssignedIdentities: %+v", existing.Model.Identity.UserAssignedIdentities)
 		if existing.Model.Identity.UserAssignedIdentities != nil {
 			for resourceId, identity := range existing.Model.Identity.UserAssignedIdentities {
-				log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: Azure GET identity[%q]: ClientId=%q, PrincipalId=%q", 
-					resourceId, 
-					pointer.From(identity.ClientID), 
+				log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: Azure GET identity[%q]: ClientId=%q, PrincipalId=%q",
+					resourceId,
+					pointer.From(identity.ClientID),
 					pointer.From(identity.PrincipalID))
 			}
 		}
@@ -380,9 +380,9 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: PUT payload identity UserAssignedIdentities: %+v", payload.Identity.UserAssignedIdentities)
 		if payload.Identity.UserAssignedIdentities != nil {
 			for resourceId, identity := range payload.Identity.UserAssignedIdentities {
-				log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: PUT payload identity[%q]: ClientId=%q, PrincipalId=%q", 
-					resourceId, 
-					pointer.From(identity.ClientID), 
+				log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: PUT payload identity[%q]: ClientId=%q, PrincipalId=%q",
+					resourceId,
+					pointer.From(identity.ClientID),
 					pointer.From(identity.PrincipalID))
 			}
 		}
