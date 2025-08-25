@@ -314,8 +314,8 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 	log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: existing.Model.Identity: %+v", existing.Model.Identity)
 	if existing.Model.Identity != nil {
 		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: Azure GET identity Type: %q", string(existing.Model.Identity.Type))
-		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: Azure GET identity PrincipalId: %q", pointer.From(existing.Model.Identity.PrincipalId))
-		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: Azure GET identity TenantId: %q", pointer.From(existing.Model.Identity.TenantId))
+		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: Azure GET identity PrincipalId: %q", existing.Model.Identity.PrincipalId)
+		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: Azure GET identity TenantId: %q", existing.Model.Identity.TenantId)
 		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: Azure GET identity IdentityIds: %+v", existing.Model.Identity.IdentityIds)
 		if existing.Model.Identity.IdentityIds != nil {
 			for resourceId, identity := range existing.Model.Identity.IdentityIds {
@@ -369,8 +369,8 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 	log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: payload.Identity before API call: %+v", payload.Identity)
 	if payload.Identity != nil {
 		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: PUT payload identity Type: %q", string(payload.Identity.Type))
-		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: PUT payload identity PrincipalId: %q", pointer.From(payload.Identity.PrincipalId))
-		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: PUT payload identity TenantId: %q", pointer.From(payload.Identity.TenantId))
+		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: PUT payload identity PrincipalId: %q", payload.Identity.PrincipalId)
+		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: PUT payload identity TenantId: %q", payload.Identity.TenantId)
 		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: PUT payload identity IdentityIds: %+v", payload.Identity.IdentityIds)
 		if payload.Identity.IdentityIds != nil {
 			for resourceId, identity := range payload.Identity.IdentityIds {
