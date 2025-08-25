@@ -227,12 +227,44 @@ func resourceArmExpressRoutePortCreate(d *pluginsdk.ResourceData, meta interface
 	locks.ByID(id.ID())
 	defer locks.UnlockByID(id.ID())
 
+	// ====== DEBUG: First CREATE call (without links) ======
+	log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: === FIRST CREATE CALL (WITHOUT LINKS) ===")
+	log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: param.Identity before first API call: %+v", param.Identity)
+	if param.Identity != nil {
+		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: First CREATE identity Type: %q", string(param.Identity.Type))
+		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: First CREATE identity UserAssignedIdentities: %+v", param.Identity.UserAssignedIdentities)
+		if param.Identity.UserAssignedIdentities != nil {
+			for resourceId, identity := range param.Identity.UserAssignedIdentities {
+				log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: First CREATE identity[%q]: ClientId=%q, PrincipalId=%q", 
+					resourceId, 
+					pointer.From(identity.ClientID), 
+					pointer.From(identity.PrincipalID))
+			}
+		}
+	}
+
 	// The link properties can't be specified in first creation. It will result into either error (e.g. setting `adminState`) or being ignored (e.g. setting MACSec)
 	if err := client.CreateOrUpdateThenPoll(ctx, id, param); err != nil {
 		return fmt.Errorf("creating %s: %+v", id, err)
 	}
 
 	param.Properties.Links = expandExpressRoutePortLinks(d.Get("link1").([]interface{}), d.Get("link2").([]interface{}))
+
+	// ====== DEBUG: Second CREATE call (with links) ======
+	log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: === SECOND CREATE CALL (WITH LINKS) ===")
+	log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: param.Identity before second API call: %+v", param.Identity)
+	if param.Identity != nil {
+		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: Second CREATE identity Type: %q", string(param.Identity.Type))
+		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: Second CREATE identity UserAssignedIdentities: %+v", param.Identity.UserAssignedIdentities)
+		if param.Identity.UserAssignedIdentities != nil {
+			for resourceId, identity := range param.Identity.UserAssignedIdentities {
+				log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: Second CREATE identity[%q]: ClientId=%q, PrincipalId=%q", 
+					resourceId, 
+					pointer.From(identity.ClientID), 
+					pointer.From(identity.PrincipalID))
+			}
+		}
+	}
 
 	if err := client.CreateOrUpdateThenPoll(ctx, id, param); err != nil {
 		return fmt.Errorf("creating %s: %+v", id, err)
@@ -267,12 +299,61 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 
 	payload := existing.Model
 
+	// ====== DEBUG: 1. Identity from Terraform state ======
+	log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: === 1. TERRAFORM STATE IDENTITY ===")
+	terraformIdentity := d.Get("identity").([]interface{})
+	log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: Raw Terraform state identity: %+v", terraformIdentity)
+	if len(terraformIdentity) > 0 {
+		if identityMap, ok := terraformIdentity[0].(map[string]interface{}); ok {
+			log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: Terraform identity type: %+v", identityMap["type"])
+			log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: Terraform identity_ids: %+v", identityMap["identity_ids"])
+			if identityIds, ok := identityMap["identity_ids"].([]interface{}); ok {
+				for i, id := range identityIds {
+					log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: Terraform identity_ids[%d]: %q", i, id)
+				}
+			}
+		}
+	}
+
+	// ====== DEBUG: 2. Identity from Azure GET response ======
+	log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: === 2. AZURE GET RESPONSE IDENTITY ===")
+	log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: existing.Model.Identity: %+v", existing.Model.Identity)
+	if existing.Model.Identity != nil {
+		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: Azure GET identity Type: %q", string(existing.Model.Identity.Type))
+		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: Azure GET identity PrincipalId: %q", pointer.From(existing.Model.Identity.PrincipalID))
+		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: Azure GET identity TenantId: %q", pointer.From(existing.Model.Identity.TenantID))
+		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: Azure GET identity UserAssignedIdentities: %+v", existing.Model.Identity.UserAssignedIdentities)
+		if existing.Model.Identity.UserAssignedIdentities != nil {
+			for resourceId, identity := range existing.Model.Identity.UserAssignedIdentities {
+				log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: Azure GET identity[%q]: ClientId=%q, PrincipalId=%q", 
+					resourceId, 
+					pointer.From(identity.ClientID), 
+					pointer.From(identity.PrincipalID))
+			}
+		}
+	}
+
 	if d.HasChange("identity") {
 		expandedIdentity, err := identity.ExpandSystemAndUserAssignedMap(d.Get("identity").([]interface{}))
 		if err != nil {
 			return fmt.Errorf("expanding `identity`: %+v", err)
 		}
 		payload.Identity = expandedIdentity
+		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: Identity has changed in config, updating from Terraform state. New identity: %+v", expandedIdentity)
+		if expandedIdentity != nil && expandedIdentity.UserAssignedIdentities != nil {
+			for resourceId := range expandedIdentity.UserAssignedIdentities {
+				log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: Using Terraform identity resourceId: %q", resourceId)
+			}
+		}
+	} else {
+		// Explicitly preserve the existing identity
+		payload.Identity = existing.Model.Identity
+		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: Identity has NOT changed, preserving existing Azure identity: %+v", existing.Model.Identity)
+		if existing.Model.Identity != nil && existing.Model.Identity.UserAssignedIdentities != nil {
+			for resourceId := range existing.Model.Identity.UserAssignedIdentities {
+				log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: Preserving Azure identity resourceId: %q", resourceId)
+			}
+		}
 	}
 
 	if d.HasChange("billing_type") {
@@ -287,6 +368,24 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 
 	if d.HasChange("tags") {
 		payload.Tags = tags.Expand(d.Get("tags").(map[string]interface{}))
+	}
+
+	// ====== DEBUG: 3. Identity that will be sent in PUT request ======
+	log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: === 3. PUT REQUEST PAYLOAD IDENTITY ===")
+	log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: payload.Identity before API call: %+v", payload.Identity)
+	if payload.Identity != nil {
+		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: PUT payload identity Type: %q", string(payload.Identity.Type))
+		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: PUT payload identity PrincipalId: %q", pointer.From(payload.Identity.PrincipalID))
+		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: PUT payload identity TenantId: %q", pointer.From(payload.Identity.TenantID))
+		log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: PUT payload identity UserAssignedIdentities: %+v", payload.Identity.UserAssignedIdentities)
+		if payload.Identity.UserAssignedIdentities != nil {
+			for resourceId, identity := range payload.Identity.UserAssignedIdentities {
+				log.Printf("[DEBUG] ERP-IDENTITY-DEBUG: PUT payload identity[%q]: ClientId=%q, PrincipalId=%q", 
+					resourceId, 
+					pointer.From(identity.ClientID), 
+					pointer.From(identity.PrincipalID))
+			}
+		}
 	}
 
 	// a lock is needed here for subresource express_route_port_authorization needs a lock.
