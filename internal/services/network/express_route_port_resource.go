@@ -267,8 +267,8 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 
 	// Debug: Log the identity from the GET response
 	if existing.Model.Identity != nil {
-		log.Printf("[DEBUG] existing.Model.Identity from GET: Type=%v, UserAssignedIdentities=%v",
-			existing.Model.Identity.Type, existing.Model.Identity.UserAssignedIdentities)
+		log.Printf("[DEBUG] existing.Model.Identity from GET: Type=%v, IdentityIds=%v",
+			existing.Model.Identity.Type, existing.Model.Identity.IdentityIds)
 	} else {
 		log.Printf("[DEBUG] existing.Model.Identity from GET: nil")
 	}
@@ -303,8 +303,8 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 
 	// Debug: Log the identity before the PUT request
 	if payload.Identity != nil {
-		log.Printf("[DEBUG] payload.Identity before PUT: Type=%v, UserAssignedIdentities=%v",
-			payload.Identity.Type, payload.Identity.UserAssignedIdentities)
+		log.Printf("[DEBUG] payload.Identity before PUT: Type=%v, IdentityIds=%v",
+			payload.Identity.Type, payload.Identity.IdentityIds)
 	} else {
 		log.Printf("[DEBUG] payload.Identity before PUT: nil")
 	}
