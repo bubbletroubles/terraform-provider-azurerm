@@ -265,6 +265,14 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 		return fmt.Errorf("retrieving %s: `properties` was nil", *id)
 	}
 
+	// Debug: Log the identity from the GET response
+	if existing.Model.Identity != nil {
+		log.Printf("[DEBUG] existing.Model.Identity from GET: Type=%v, UserAssignedIdentities=%v",
+			existing.Model.Identity.Type, existing.Model.Identity.UserAssignedIdentities)
+	} else {
+		log.Printf("[DEBUG] existing.Model.Identity from GET: nil")
+	}
+
 	payload := existing.Model
 
 	if d.HasChange("identity") {
@@ -292,6 +300,14 @@ func resourceArmExpressRoutePortUpdate(d *pluginsdk.ResourceData, meta interface
 	// a lock is needed here for subresource express_route_port_authorization needs a lock.
 	locks.ByID(id.ID())
 	defer locks.UnlockByID(id.ID())
+
+	// Debug: Log the identity before the PUT request
+	if payload.Identity != nil {
+		log.Printf("[DEBUG] payload.Identity before PUT: Type=%v, UserAssignedIdentities=%v",
+			payload.Identity.Type, payload.Identity.UserAssignedIdentities)
+	} else {
+		log.Printf("[DEBUG] payload.Identity before PUT: nil")
+	}
 
 	if err := client.CreateOrUpdateThenPoll(ctx, *id, *payload); err != nil {
 		return fmt.Errorf("updating %s: %+v", id, err)
