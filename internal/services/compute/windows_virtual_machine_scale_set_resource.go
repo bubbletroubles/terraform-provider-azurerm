@@ -953,14 +953,7 @@ func resourceWindowsVirtualMachineScaleSetRead(d *pluginsdk.ResourceData, meta i
 				upgradeMode = *policy.Mode
 				d.Set("upgrade_mode", string(upgradeMode))
 
-				// The API returns a populated `automatic_os_upgrade_policy` block (with default values)
-				// even when `upgrade_mode` is `Manual`, where the block cannot be configured. Only surface
-				// the block for the upgrade modes that actually support it, otherwise it produces a
-				// persistent diff. (#29118)
-				flattenedAutomatic := make([]interface{}, 0)
-				if upgradeMode == virtualmachinescalesets.UpgradeModeAutomatic || upgradeMode == virtualmachinescalesets.UpgradeModeRolling {
-					flattenedAutomatic = FlattenVirtualMachineScaleSetAutomaticOSUpgradePolicy(policy.AutomaticOSUpgradePolicy)
-				}
+				flattenedAutomatic := FlattenVirtualMachineScaleSetAutomaticOSUpgradePolicy(policy.AutomaticOSUpgradePolicy)
 				if err := d.Set("automatic_os_upgrade_policy", flattenedAutomatic); err != nil {
 					return fmt.Errorf("setting `automatic_os_upgrade_policy`: %+v", err)
 				}

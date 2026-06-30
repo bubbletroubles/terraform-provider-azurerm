@@ -1070,15 +1070,9 @@ func resourceLinuxVirtualMachineScaleSetRead(d *pluginsdk.ResourceData, meta int
 			}
 
 			if policy := props.UpgradePolicy; policy != nil {
-				upgradeMode := pointer.From(policy.Mode)
-				d.Set("upgrade_mode", string(upgradeMode))
+				d.Set("upgrade_mode", string(pointer.From(policy.Mode)))
 
-				flattenedAutomatic := make([]interface{}, 0)
-
-				if upgradeMode == virtualmachinescalesets.UpgradeModeAutomatic || upgradeMode == virtualmachinescalesets.UpgradeModeRolling {
-					flattenedAutomatic = FlattenVirtualMachineScaleSetAutomaticOSUpgradePolicy(policy.AutomaticOSUpgradePolicy)
-				}
-				
+				flattenedAutomatic := FlattenVirtualMachineScaleSetAutomaticOSUpgradePolicy(policy.AutomaticOSUpgradePolicy)
 				if err := d.Set("automatic_os_upgrade_policy", flattenedAutomatic); err != nil {
 					return fmt.Errorf("setting `automatic_os_upgrade_policy`: %+v", err)
 				}
