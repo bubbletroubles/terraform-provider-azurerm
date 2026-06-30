@@ -801,6 +801,7 @@ func TestAccLinuxVirtualMachineScaleSet_otherDisableReimageOnManualUpgrade(t *te
 			Config: r.otherDisableReimageOnManualUpgrade(data, "Standard_F2"),
 			Check: acceptance.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
+				check.That(data.ResourceName).Key("automatic_os_upgrade_policy.#").HasValue("0"),
 			),
 		},
 		data.ImportStep("admin_password"),
@@ -808,6 +809,7 @@ func TestAccLinuxVirtualMachineScaleSet_otherDisableReimageOnManualUpgrade(t *te
 			Config: r.otherDisableReimageOnManualUpgrade(data, "Standard_F4"),
 			Check: acceptance.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
+				check.That(data.ResourceName).Key("automatic_os_upgrade_policy.#").HasValue("0"),
 			),
 		},
 		data.ImportStep("admin_password"),

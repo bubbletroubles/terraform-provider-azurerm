@@ -883,8 +883,7 @@ func TestAccWindowsVirtualMachineScaleSet_otherCancelRollingUpgrades(t *testing.
 			Check: acceptance.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
 				data.CheckWithClientForResource(func(ctx context.Context, clients *clients.Client, state *terraform.InstanceState) error {
-					// This function manually updates the value for the image sku which triggers rolling upgrades
-					// and simulates the scenario where rolling upgrades are running when we try to delete a VMSS
+
 					client := clients.Compute.VirtualMachineScaleSetsClient
 
 					id, err := virtualmachinescalesets.ParseVirtualMachineScaleSetID(state.Attributes["id"])
@@ -977,6 +976,82 @@ resource "azurerm_windows_virtual_machine_scale_set" "test" {
   }
 }
 `, r.template(data))
+}
+
+func TestAccWindowsVirtualMachineScaleSet_otherDisableReimageOnManualUpgrade(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_windows_virtual_machine_scale_set", "test")
+	r := WindowsVirtualMachineScaleSetResource{}
+
+	data.ResourceTest(t, r, []acceptance.TestStep{
+		{
+			Config: r.otherDisableReimageOnManualUpgrade(data, "Standard_F2"),
+			Check: acceptance.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+				// the API returns a populated `automatic_os_upgrade_policy` block even though it
+				// cannot be configured in `Manual` mode - this should not be surfaced into state
+				// otherwise it results in a persistent diff (#29118)
+				check.That(data.ResourceName).Key("automatic_os_upgrade_policy.#").HasValue("0"),
+			),
+		},
+		data.ImportStep("admin_password"),
+		{
+			Config: r.otherDisableReimageOnManualUpgrade(data, "Standard_F4"),
+			Check: acceptance.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+				check.That(data.ResourceName).Key("automatic_os_upgrade_policy.#").HasValue("0"),
+			),
+		},
+		data.ImportStep("admin_password"),
+	})
+}
+
+func (r WindowsVirtualMachineScaleSetResource) otherDisableReimageOnManualUpgrade(data acceptance.TestData, sku string) string {
+	return fmt.Sprintf(`
+provider "azurerm" {
+  features {
+    virtual_machine_scale_set {
+      reimage_on_manual_upgrade    = false
+      roll_instances_when_required = true
+    }
+  }
+}
+
+%s
+
+resource "azurerm_windows_virtual_machine_scale_set" "test" {
+  name                = local.vm_name
+  resource_group_name = azurerm_resource_group.test.name
+  location            = azurerm_resource_group.test.location
+  sku                 = "%s"
+  instances           = 1
+  admin_username      = "adminuser"
+  admin_password      = "P@ssword1234!"
+  upgrade_mode        = "Manual"
+
+  source_image_reference {
+    publisher = "MicrosoftWindowsServer"
+    offer     = "WindowsServer"
+    sku       = "2019-Datacenter"
+    version   = "latest"
+  }
+
+  os_disk {
+    storage_account_type = "Standard_LRS"
+    caching              = "ReadWrite"
+  }
+
+  network_interface {
+    name    = "example"
+    primary = true
+
+    ip_configuration {
+      name      = "internal"
+      primary   = true
+      subnet_id = azurerm_subnet.test.id
+    }
+  }
+}
+`, r.templateWithOutProvider(data), sku)
 }
 
 func (r WindowsVirtualMachineScaleSetResource) otherBootDiagnostics(data acceptance.TestData) string {
