@@ -219,6 +219,8 @@ output "storage_account_tier" {
 
 * `azure_files_authentication` - A `azure_files_authentication` block as defined below.
 
+* `smb_oauth_enabled` - Is SMB OAuth (managed identity authentication over SMB) enabled for Azure Files?
+
 ---
 
 * `custom_domain` supports the following:

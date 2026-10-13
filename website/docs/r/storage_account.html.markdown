@@ -186,6 +186,8 @@ The following arguments are supported:
 
 -> **Note:** SFTP support requires `is_hns_enabled` set to `true`. [More information on SFTP support can be found here](https://learn.microsoft.com/azure/storage/blobs/secure-file-transfer-protocol-support). Defaults to `false`
 
+* `smb_oauth_enabled` - (Optional) Should managed identities be able to authenticate to Azure Files over SMB using OAuth? Defaults to `false`. [More information can be found here](https://learn.microsoft.com/azure/storage/files/files-managed-identities).
+
 * `dns_endpoint_type` - (Optional) Specifies which DNS endpoint type to use. Possible values are `Standard` and `AzureDnsZone`. Defaults to `Standard`. Changing this forces a new resource to be created.
 
 -> **Note:** Azure DNS zone support requires `PartitionedDns` feature to be enabled. To enable this feature for your subscription, use the following command: `az feature register --namespace "Microsoft.Storage" --name "PartitionedDns"`.

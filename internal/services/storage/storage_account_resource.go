@@ -724,6 +724,12 @@ func resourceStorageAccount() *pluginsdk.Resource {
 				Default:  false,
 			},
 
+			"smb_oauth_enabled": {
+				Type:     pluginsdk.TypeBool,
+				Optional: true,
+				Default:  false,
+			},
+
 			"large_file_share_enabled": {
 				Type:     pluginsdk.TypeBool,
 				Optional: true,
@@ -1377,8 +1383,8 @@ func resourceStorageAccountCreate(d *pluginsdk.ResourceData, meta any) error {
 	if v := d.Get("allowed_copy_scope").(string); v != "" {
 		payload.Properties.AllowedCopyScope = pointer.ToEnum[storageaccounts.AllowedCopyScope](v)
 	}
-	if v, ok := d.GetOk("azure_files_authentication"); ok {
-		expandAADFilesAuthentication, err := expandAccountAzureFilesAuthentication(v.([]any))
+	if _, ok := d.GetOk("azure_files_authentication"); ok || d.Get("smb_oauth_enabled").(bool) {
+		expandAADFilesAuthentication, err := expandAccountAzureFilesAuthentication(d.Get("azure_files_authentication").([]any), d.Get("smb_oauth_enabled").(bool))
 		if err != nil {
 			return fmt.Errorf("parsing `azure_files_authentication`: %v", err)
 		}
@@ -1780,8 +1786,8 @@ func resourceStorageAccountUpdate(d *pluginsdk.ResourceData, meta any) error {
 
 	// avoid triggering an unnecessary update (`PUT`) API request if there are no other changes besides the below items
 	// `account_replication_type` may only require a migration request without the main `PUT` request
-	// `azure_files_authentication`, `blob_properties`, and `share_properties` ecah use their own API requests
-	updateRequired := d.HasChangesExcept("account_replication_type", "azure_files_authentication", "blob_properties", "share_properties")
+	// `azure_files_authentication`, `smb_oauth_enabled`, `blob_properties`, and `share_properties` ecah use their own API requests
+	updateRequired := d.HasChangesExcept("account_replication_type", "azure_files_authentication", "smb_oauth_enabled", "blob_properties", "share_properties")
 
 	migrationRequired := false
 	if d.HasChange("account_replication_type") {
@@ -1814,7 +1820,7 @@ func resourceStorageAccountUpdate(d *pluginsdk.ResourceData, meta any) error {
 	}
 
 	// azure_files_authentication must be the last to be updated, cause it'll occupy the storage account for several minutes after receiving the response 200 OK. Issue: https://github.com/Azure/azure-rest-api-specs/issues/11272
-	if d.HasChange("azure_files_authentication") {
+	if d.HasChanges("azure_files_authentication", "smb_oauth_enabled") {
 		// due to service issue: https://github.com/Azure/azure-rest-api-specs/issues/12473, we need to update to None before changing its DirectoryServiceOptions
 		old, new := d.GetChange("azure_files_authentication.0.directory_type")
 		if old != new && new != string(storageaccounts.DirectoryServiceOptionsNone) {
@@ -1831,7 +1837,7 @@ func resourceStorageAccountUpdate(d *pluginsdk.ResourceData, meta any) error {
 			}
 		}
 
-		expandAADFilesAuthentication, err := expandAccountAzureFilesAuthentication(d.Get("azure_files_authentication").([]any))
+		expandAADFilesAuthentication, err := expandAccountAzureFilesAuthentication(d.Get("azure_files_authentication").([]any), d.Get("smb_oauth_enabled").(bool))
 		if err != nil {
 			return fmt.Errorf("expanding `azure_files_authentication`: %+v", err)
 		}
@@ -2035,6 +2041,7 @@ func resourceStorageAccountFlatten(ctx context.Context, d *pluginsdk.ResourceDat
 		}
 		d.Set("secondary_location", pointer.From(props.SecondaryLocation))
 		d.Set("sftp_enabled", pointer.From(props.IsSftpEnabled))
+		d.Set("smb_oauth_enabled", flattenAccountSmbOAuthEnabled(props.AzureFilesIdentityBasedAuthentication))
 		d.Set("allow_nested_items_to_be_public", pointer.From(props.AllowBlobPublicAccess))
 		d.Set("default_to_oauth_authentication", pointer.From(props.DefaultToOAuthAuthentication))
 
@@ -2482,16 +2489,22 @@ func flattenAccountActiveDirectoryProperties(input *storageaccounts.ActiveDirect
 	return output
 }
 
-func expandAccountAzureFilesAuthentication(input []any) (*storageaccounts.AzureFilesIdentityBasedAuthentication, error) {
+func expandAccountAzureFilesAuthentication(input []any, smbOAuthEnabled bool) (*storageaccounts.AzureFilesIdentityBasedAuthentication, error) {
+	smbOAuthSettings := &storageaccounts.SmbOAuthSettings{
+		IsSmbOAuthEnabled: pointer.To(smbOAuthEnabled),
+	}
+
 	if len(input) == 0 {
 		return &storageaccounts.AzureFilesIdentityBasedAuthentication{
 			DirectoryServiceOptions: storageaccounts.DirectoryServiceOptionsNone,
+			SmbOAuthSettings:        smbOAuthSettings,
 		}, nil
 	}
 
 	v := input[0].(map[string]any)
 	output := storageaccounts.AzureFilesIdentityBasedAuthentication{
 		DirectoryServiceOptions: storageaccounts.DirectoryServiceOptions(v["directory_type"].(string)),
+		SmbOAuthSettings:        smbOAuthSettings,
 	}
 	if output.DirectoryServiceOptions == storageaccounts.DirectoryServiceOptionsAD ||
 		output.DirectoryServiceOptions == storageaccounts.DirectoryServiceOptionsAADDS ||
@@ -2535,6 +2548,14 @@ func flattenAccountAzureFilesAuthentication(input *storageaccounts.AzureFilesIde
 			"default_share_level_permission": input.DefaultSharePermission,
 		},
 	}
+}
+
+func flattenAccountSmbOAuthEnabled(input *storageaccounts.AzureFilesIdentityBasedAuthentication) bool {
+	if input == nil || input.SmbOAuthSettings == nil {
+		return false
+	}
+
+	return pointer.From(input.SmbOAuthSettings.IsSmbOAuthEnabled)
 }
 
 func expandAccountRoutingPreference(input []any) *storageaccounts.RoutingPreference {
